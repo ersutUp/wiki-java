@@ -23,7 +23,7 @@
 
 	![档案类图](./images/boot-archive-class-structure.png)
 
-	1. **jar档案类**（重点类）： org.springframework.boot.loader.archive.JarFileArchive
+	1. **jar档案类**（重点类,存储jar包的信息）： org.springframework.boot.loader.archive.JarFileArchive
 	2. 目录档案类： org.springframework.boot.loader.archive.ExplodedArchive
 
 ### 启动器类与档案类的关系
