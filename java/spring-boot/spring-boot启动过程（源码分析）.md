@@ -4,7 +4,9 @@
 1. http://www.iocoder.cn/Spring-Boot/jar/?self
 
 ## 代码来源
-文章中代码均来源于 [spring-boot 开源库](https://github.com/spring-projects/spring-boot) ，git版本号：9ee2487
+文章中代码均来源于 [spring-boot 开源库](https://github.com/spring-projects/spring-boot) 
+spring-boot版本号：v2.4.0-M2
+git版本号：e6ee3c1
 
 ## 优先阅读
 - [spring-boot启动过程（简单分析）](./spring-boot启动过程（简单分析）.md)
