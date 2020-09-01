@@ -38,6 +38,7 @@
 - Spring-Boot-Lib: 应用程序的依赖包路径
 - 更多属性解读参考文章：
 	- https://www.cnblogs.com/Gandy/p/7290069.html
+
 ## JarLauncher
 > spring boot 启动jar显然是使用的第二种方式，那么jar包启动类就是 org.springframework.boot.loader.JarLauncher
 ### 为什么需要 JarLauncher 而不是直接在 Main-Class 上直接配置 springboot 的启动类
@@ -68,3 +69,6 @@ org.springframework.boot.loader.MainMethodRunner#run（图2）
 4. 运行springboot启动类
 	1. 最终创建MainMethodRunner 运行 run 方法
 	2. run方法使用反射机制 运行springboot启动类的main方法
+
+## 进阶
+- [spring-boot启动过程（源码分析）](./spring-boot启动过程（源码分析）.md)
