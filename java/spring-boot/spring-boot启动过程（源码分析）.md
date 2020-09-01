@@ -9,7 +9,8 @@
 ## 优先阅读
 - [spring-boot启动过程（简单分析）](./spring-boot启动过程（简单分析）.md)
 
-##类结构分析
+## 类结构分析
+
 ### 涉及到的类以及类图
 1. 启动器: org.springframework.boot.loader.Launcher
 	
