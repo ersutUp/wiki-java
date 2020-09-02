@@ -32,7 +32,7 @@ git版本号：e6ee3c1
 
 ### 启动器类与档案类的关系
 
-> jar包启动时创建 JarLauncher 对象（通过无参构造创建）；由于创建 JarLauncher ，所以会调用 ExecutableArchiveLauncher 的无参构造（类加载导致），此构造方法中生成了运行jar包的 Archive ；同时通过 JarLauncher 调用了  Launcher#launch 方法，其中生成了嵌套jar包的 Archive 。
+> jar包启动时创建 JarLauncher 对象（通过无参构造创建）并调用launch方法；由于创建 JarLauncher ，所以会调用 ExecutableArchiveLauncher 的无参构造（类加载导致），此构造方法中生成了运行jar包的 Archive ；然后通过 JarLauncher 调用了  Launcher#launch 方法，其中生成了嵌套jar包的 Archive 。
 
 ### 相关代码
 1. JarLauncher#main 内
