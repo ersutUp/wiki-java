@@ -4,10 +4,10 @@
 >> 以下均已 jar包 运行方式分析
 
 > 参考文章：
->> 芋道源码: http://www.iocoder.cn/Spring-Boot/jar/?self
->> Java URL协议扩展实现: https://www.iteye.com/blog/mercyblitz-735529
+>> 芋道源码: http://www.iocoder.cn/Spring-Boot/jar/?self<br/>
+>> Java URL协议扩展实现: https://www.iteye.com/blog/mercyblitz-735529<br/>
 >> 官方推荐的docker运行方式：
->>>https://blog.csdn.net/boling_cavalry/article/details/106597358
+>>>https://blog.csdn.net/boling_cavalry/article/details/106597358<br/>
 >>>https://juejin.im/post/6844904182743302151
 
 
@@ -176,7 +176,7 @@ git版本号：e6ee3c1
 			String jarMode = System.getProperty("jarmode");
 			//获取springboot启动类
 			String launchClass = (jarMode != null && !jarMode.isEmpty()) ? JAR_MODE_LAUNCHER : getMainClass();
-			//启动springboot启动类
+			//启动springboot的启动类
 			launch(args, launchClass, classLoader);
 		}
 		...
@@ -185,143 +185,152 @@ git版本号：e6ee3c1
 	1. JarFile#registerUrlProtocolHandler
 	这段代码需要有 Java URL协议扩展实现 的基础。推荐文章：https://www.iteye.com/blog/mercyblitz-735529
 
-	```
-	public class JarFile extends java.util.jar.JarFile implements Iterable<java.util.jar.JarEntry> {
-		...
-		//自定义 URL 扩展方式之一
-		private static final String PROTOCOL_HANDLER = "java.protocol.handler.pkgs";
-		//扩展 jar协议的包路径
-		private static final String HANDLERS_PACKAGE = "org.springframework.boot.loader";
-		...
-		public static void registerUrlProtocolHandler() {
-			//获取系统参数值
-			String handlers = System.getProperty(PROTOCOL_HANDLER, "");
-			//添加 springboot自己 扩展jar的协议
-			System.setProperty(PROTOCOL_HANDLER,
-					("".equals(handlers) ? HANDLERS_PACKAGE : handlers + "|" + HANDLERS_PACKAGE));
-			//清除工厂扩展方式 以及 已缓存的Handler
-			resetCachedUrlHandlers();
-		}
-	
-		private static void resetCachedUrlHandlers() {
-			try {
-				URL.setURLStreamHandlerFactory(null);
+		```
+		public class JarFile extends java.util.jar.JarFile implements Iterable<java.util.jar.JarEntry> {
+			...
+			//自定义 URL 扩展方式之一
+			private static final String PROTOCOL_HANDLER = "java.protocol.handler.pkgs";
+			//扩展 jar协议的包路径
+			private static final String HANDLERS_PACKAGE = "org.springframework.boot.loader";
+			...
+			public static void registerUrlProtocolHandler() {
+				//获取系统参数值
+				String handlers = System.getProperty(PROTOCOL_HANDLER, "");
+				//添加 springboot自己 扩展jar的协议
+				System.setProperty(PROTOCOL_HANDLER,
+						("".equals(handlers) ? HANDLERS_PACKAGE : handlers + "|" + HANDLERS_PACKAGE));
+				//清除工厂扩展方式 以及 已缓存的Handler
+				resetCachedUrlHandlers();
 			}
-			catch (Error ex) {
-				// Ignore
+
+			private static void resetCachedUrlHandlers() {
+				try {
+					URL.setURLStreamHandlerFactory(null);
+				}
+				catch (Error ex) {
+					// Ignore
+				}
 			}
 		}
-	}
-	```
+		```
 	2. ExecutableArchiveLauncher#getClassPathArchivesIterator 获取所有BOOT-INF/lib中的嵌套jar以及BOOT-INF/classes中的class文件。
 	
 	这段比较绕建议直接看源码去理解 其中涉及 JarFileArchive、JarFile 中的一部分方法（其中还使用了lambda）
-	3. createClassLoader
-	```
-	//第一段
-	public abstract class ExecutableArchiveLauncher extends Launcher {
-		...
-		@Override
-		protected ClassLoader createClassLoader(Iterator<Archive> archives) throws Exception {
-			List<URL> urls = new ArrayList<>(guessClassPathSize());
-			while (archives.hasNext()) {
-				//获取 BOOT-INF/lib中的嵌套jar以及BOOT-INF/classes中的class文件 对应的URL
-				urls.add(archives.next().getUrl());
-			}
-			//这可以不看 jar包 运行这是空的，官方推荐的dockerFile运行会走这里
-			if (this.classPathIndex != null) {
-				urls.addAll(this.classPathIndex.getUrls());
-			}
-			return createClassLoader(urls.toArray(new URL[0]));
-		}
 	
-		private int guessClassPathSize() {
-			if (this.classPathIndex != null) {
-				return this.classPathIndex.size() + 10;
-			}
-			return 50;
-		}
-		...
-	}
-	//第二段	
-	public abstract class Launcher {
-		...
-		protected ClassLoader createClassLoader(URL[] urls) throws Exception {
-			//对 BOOT-INF/lib中的嵌套jar以及BOOT-INF/classes中的class文件对应的URL 创建LaunchedURLClassLoader
-			return new LaunchedURLClassLoader(isExploded(), getArchive(), urls, getClass().getClassLoader());
-		}
-		...
-	}
-
-	```
-	4. ExecutableArchiveLauncher#getMainClass
-	```
-	public abstract class ExecutableArchiveLauncher extends Launcher {
-		//MANIFSET文件中springboot启动类的属性名
-		private static final String START_CLASS_ATTRIBUTE = "Start-Class";
-		@Override
-		protected String getMainClass() throws Exception {
-			//获取MANIFSET文件生成的对象
-			Manifest manifest = this.archive.getManifest();
-			String mainClass = null;
-			if (manifest != null) {
-				//获取Start-Class属性对应的值
-				mainClass = manifest.getMainAttributes().getValue(START_CLASS_ATTRIBUTE);
-			}
-			if (mainClass == null) {
-				throw new IllegalStateException("No 'Start-Class' manifest entry specified in " + this);
-			}
-			return mainClass;
-		}
-	}
-	```
-	5. Launcher#launch(java.lang.String[], java.lang.String, java.lang.ClassLoader)
-
+	3. createClassLoader 创建LaunchedURLClassLoader
+	
 	第一段
-	```
-	protected void launch(String[] args, String launchClass, ClassLoader classLoader) throws Exception {
-		//设置 LaunchedURLClassLoader 作为类加载器
-		Thread.currentThread().setContextClassLoader(classLoader);
-		//创建MainMethodRunner并执行run方法
-		createMainMethodRunner(launchClass, args, classLoader).run();
-	}
-	protected MainMethodRunner createMainMethodRunner(String mainClass, String[] args, ClassLoader classLoader) {
-		//看第二段
-		return new MainMethodRunner(mainClass, args);
-	}
-	```
+	
+		```
+		public abstract class ExecutableArchiveLauncher extends Launcher {
+			...
+			@Override
+			protected ClassLoader createClassLoader(Iterator<Archive> archives) throws Exception {
+				List<URL> urls = new ArrayList<>(guessClassPathSize());
+				while (archives.hasNext()) {
+					//获取 BOOT-INF/lib中的嵌套jar以及BOOT-INF/classes中的class文件 对应的URL
+					urls.add(archives.next().getUrl());
+				}
+				//这可以不看 jar包 运行这是空的，官方推荐的dockerFile运行会走这里
+				if (this.classPathIndex != null) {
+					urls.addAll(this.classPathIndex.getUrls());
+				}
+				return createClassLoader(urls.toArray(new URL[0]));
+			}
+
+			private int guessClassPathSize() {
+				if (this.classPathIndex != null) {
+					return this.classPathIndex.size() + 10;
+				}
+				return 50;
+			}
+			...
+		}
+		```
 	
 	第二段
 	
-	```
-	public class MainMethodRunner {
-	
-		private final String mainClassName;
-	
-		private final String[] args;
-	
-		/**
-		 * Create a new {@link MainMethodRunner} instance.
-		 * @param mainClass the main class
-		 * @param args incoming arguments
-		 */
-		public MainMethodRunner(String mainClass, String[] args) {
-			this.mainClassName = mainClass;
-			this.args = (args != null) ? args.clone() : null;
+		```
+		public abstract class Launcher {
+			...
+			protected ClassLoader createClassLoader(URL[] urls) throws Exception {
+				//对 BOOT-INF/lib中的嵌套jar以及BOOT-INF/classes中的class文件对应的URL 创建LaunchedURLClassLoader
+				return new LaunchedURLClassLoader(isExploded(), getArchive(), urls, getClass().getClassLoader());
+			}
+			...
 		}
-	
-		public void run() throws Exception {
-			//获取启动类
-			Class<?> mainClass = Class.forName(this.mainClassName, false, Thread.currentThread().getContextClassLoader());
-			//获取main方法
-			Method mainMethod = mainClass.getDeclaredMethod("main", String[].class);
-			mainMethod.setAccessible(true);
-			//通过反射运行main方法
-			mainMethod.invoke(null, new Object[] { this.args });
+
+		```
+		
+	4. ExecutableArchiveLauncher#getMainClass 获取springboot启动类
+		```
+		public abstract class ExecutableArchiveLauncher extends Launcher {
+			//MANIFSET文件中springboot启动类的属性名
+			private static final String START_CLASS_ATTRIBUTE = "Start-Class";
+			@Override
+			protected String getMainClass() throws Exception {
+				//获取MANIFSET文件生成的对象
+				Manifest manifest = this.archive.getManifest();
+				String mainClass = null;
+				if (manifest != null) {
+					//获取Start-Class属性对应的值
+					mainClass = manifest.getMainAttributes().getValue(START_CLASS_ATTRIBUTE);
+				}
+				if (mainClass == null) {
+					throw new IllegalStateException("No 'Start-Class' manifest entry specified in " + this);
+				}
+				return mainClass;
+			}
 		}
+		```
+	5. Launcher#launch(java.lang.String[], java.lang.String, java.lang.ClassLoader) 启动springboot的启动类
+
+	第一段
 	
-	}
-	```
+		```
+		protected void launch(String[] args, String launchClass, ClassLoader classLoader) throws Exception {
+			//设置 LaunchedURLClassLoader 作为类加载器
+			Thread.currentThread().setContextClassLoader(classLoader);
+			//创建MainMethodRunner并执行run方法
+			createMainMethodRunner(launchClass, args, classLoader).run();
+		}
+		protected MainMethodRunner createMainMethodRunner(String mainClass, String[] args, ClassLoader classLoader) {
+			//看第二段
+			return new MainMethodRunner(mainClass, args);
+		}
+		```
+	
+	第二段
+	
+		```
+		public class MainMethodRunner {
+
+			private final String mainClassName;
+
+			private final String[] args;
+
+			/**
+			 * Create a new {@link MainMethodRunner} instance.
+			 * @param mainClass the main class
+			 * @param args incoming arguments
+			 */
+			public MainMethodRunner(String mainClass, String[] args) {
+				this.mainClassName = mainClass;
+				this.args = (args != null) ? args.clone() : null;
+			}
+
+			public void run() throws Exception {
+				//获取启动类
+				Class<?> mainClass = Class.forName(this.mainClassName, false, Thread.currentThread().getContextClassLoader());
+				//获取main方法
+				Method mainMethod = mainClass.getDeclaredMethod("main", String[].class);
+				mainMethod.setAccessible(true);
+				//通过反射运行main方法
+				mainMethod.invoke(null, new Object[] { this.args });
+			}
+
+		}
+		```
 
 ## <span id="JarFile">【可选】</span> org.springframework.boot.loader.jar.JarFile#JarFile(java.io.File) 构造方法
 
