@@ -10,7 +10,6 @@
 >>>https://blog.csdn.net/boling_cavalry/article/details/106597358<br/>
 >>>https://juejin.im/post/6844904182743302151
 
-
 ## 代码来源
 文章中代码均来源于 [spring-boot 开源库](https://github.com/spring-projects/spring-boot) 
 
@@ -331,9 +330,9 @@ git版本号：e6ee3c1
 
 > 小知识：jar包其实是一个zip压缩包，所有jar包的文件结构与zip的文件结构一致；
 >> zip的文件大致结构：
-1. 文件数据区
-2. 文件目录区(核心目录)
-3. 目录结束标志（EOCD）
+>>>1. 文件数据区
+>>>2. 文件目录区(核心目录)
+>>>3. 目录结束标志（EOCD）
 
 >> 他们之间的关系 目录结束标志 可以找到 文件目录区 ，文件目录区 可以找到 文件数据区
 
@@ -350,87 +349,88 @@ org.springframework.boot.loader.jar.JarFile 继承了 java.util.jar.JarFile
  
 #### JarFile.entries（JarFile.JarFileEntries）
 先看下 JarFileEntries 的类图，JarFileEntries 实现了 CentralDirectoryVisitor接口。
+
 ![JarFileEntries类图](./images/boot-JarFileEntries-class-structure.png)
 
 提前声明JarFile.entries 其实是 核心目录解析类（CentralDirectoryParser） 进行的处理，具体怎么处理下边会讲到，先跟看序号按顺序源码吧
 
-	```
-	public class JarFile extends java.util.jar.JarFile implements Iterable<java.util.jar.JarEntry> {
-		...
-		//META-INF目录的对象
-		private static final AsciiBytes META_INF = new AsciiBytes("META-INF/");
-		//jar包签名文件的后缀
-		private static final AsciiBytes SIGNATURE_FILE_EXTENSION = new AsciiBytes(".SF");
+```
+public class JarFile extends java.util.jar.JarFile implements Iterable<java.util.jar.JarEntry> {
+	...
+	//META-INF目录的对象
+	private static final AsciiBytes META_INF = new AsciiBytes("META-INF/");
+	//jar包签名文件的后缀
+	private static final AsciiBytes SIGNATURE_FILE_EXTENSION = new AsciiBytes(".SF");
 
-		...
-		
-		//存储了嵌套jar的位置、名称
-		private JarFileEntries entries;
-		
-		...
+	...
 
-		//1、构造
-		public JarFile(File file) throws IOException {
-			this(new RandomAccessDataFile(file));
-		}
-		//2、构造
-		JarFile(RandomAccessDataFile file) throws IOException {
-			this(file, "", file, JarFileType.DIRECT);
-		}
-		//3、构造
-		private JarFile(RandomAccessDataFile rootFile, String pathFromRoot, RandomAccessData data, JarFileType type)
-				throws IOException {
-			this(null, rootFile, pathFromRoot, data, null, type, null);
-		}
-		//4、构造
-		private JarFile(JarFile parent, RandomAccessDataFile rootFile, String pathFromRoot, RandomAccessData data,
-			JarEntryFilter filter, JarFileType type, Supplier<Manifest> manifestSupplier) throws IOException {
-			...
-			//5、创建 核心目录解析类
-			CentralDirectoryParser parser = new CentralDirectoryParser();
-			//6、添加 JarFileEntries 给 核心目录解析类
-			this.entries = parser.addVisitor(new JarFileEntries(this, filter));
-			//7、添加 centralDirectoryVisitor() 给 核心目录解析类
-			arser.addVisitor(centralDirectoryVisitor());
-			try {
-				//9、开始解析 核心目录 经过这一步 this.entries 就已经处理完了
-				this.data = parser.parse(data, filter == null);
-			}
-			catch (RuntimeException ex) {
-				close();
-				throw ex;
-			}
-			...
-		}
+	//存储了嵌套jar的位置、名称
+	private JarFileEntries entries;
+
+	...
+
+	//1、构造
+	public JarFile(File file) throws IOException {
+		this(new RandomAccessDataFile(file));
+	}
+	//2、构造
+	JarFile(RandomAccessDataFile file) throws IOException {
+		this(file, "", file, JarFileType.DIRECT);
+	}
+	//3、构造
+	private JarFile(RandomAccessDataFile rootFile, String pathFromRoot, RandomAccessData data, JarFileType type)
+			throws IOException {
+		this(null, rootFile, pathFromRoot, data, null, type, null);
+	}
+	//4、构造
+	private JarFile(JarFile parent, RandomAccessDataFile rootFile, String pathFromRoot, RandomAccessData data,
+		JarEntryFilter filter, JarFileType type, Supplier<Manifest> manifestSupplier) throws IOException {
 		...
-		//8、这个方法处理了两件事情
-		private CentralDirectoryVisitor centralDirectoryVisitor() {
-			return new CentralDirectoryVisitor() {
-	
-				@Override
-				public void visitStart(CentralDirectoryEndRecord endRecord, RandomAccessData centralDirectoryData) {
-					//8.1、获取运行jar包注释内容
-					JarFile.this.comment = endRecord.getComment();
-				}
-	
-				@Override
-				public void visitFileHeader(CentralDirectoryFileHeader fileHeader, int dataOffset) {
-					//8.2判断jar包是否签名 ，签名文件在 META-INF/ 后缀名为 .SF
-					AsciiBytes name = fileHeader.getName();
-					if (name.startsWith(META_INF) && name.endsWith(SIGNATURE_FILE_EXTENSION)) {
-						JarFile.this.signed = true;
-					}
-				}
-	
-				@Override
-				public void visitEnd() {
-				}
-	
-			};
+		//5、创建 核心目录解析类
+		CentralDirectoryParser parser = new CentralDirectoryParser();
+		//6、添加 JarFileEntries 给 核心目录解析类
+		this.entries = parser.addVisitor(new JarFileEntries(this, filter));
+		//7、添加 centralDirectoryVisitor() 给 核心目录解析类
+		arser.addVisitor(centralDirectoryVisitor());
+		try {
+			//9、开始解析 核心目录 经过这一步 this.entries 就已经处理完了
+			this.data = parser.parse(data, filter == null);
+		}
+		catch (RuntimeException ex) {
+			close();
+			throw ex;
 		}
 		...
 	}
-	```
+	...
+	//8、这个方法处理了两件事情
+	private CentralDirectoryVisitor centralDirectoryVisitor() {
+		return new CentralDirectoryVisitor() {
+
+			@Override
+			public void visitStart(CentralDirectoryEndRecord endRecord, RandomAccessData centralDirectoryData) {
+				//8.1、获取运行jar包注释内容
+				JarFile.this.comment = endRecord.getComment();
+			}
+
+			@Override
+			public void visitFileHeader(CentralDirectoryFileHeader fileHeader, int dataOffset) {
+				//8.2判断jar包是否签名 ，签名文件在 META-INF/ 后缀名为 .SF
+				AsciiBytes name = fileHeader.getName();
+				if (name.startsWith(META_INF) && name.endsWith(SIGNATURE_FILE_EXTENSION)) {
+					JarFile.this.signed = true;
+				}
+			}
+
+			@Override
+			public void visitEnd() {
+			}
+
+		};
+	}
+	...
+}
+```
 #### 核心目录解析类（CentralDirectoryParser） 具体怎么处理的。
 CentralDirectoryEndRecord、CentralDirectoryFileHeader这两个类不再深入，接下来跟着序号继续看源码吧
 ```
