@@ -218,9 +218,7 @@ git版本号：e6ee3c1
 	这段比较绕建议直接看源码去理解 其中涉及 JarFileArchive、JarFile 中的一部分方法（其中还使用了lambda）
 	
 	3. createClassLoader 创建LaunchedURLClassLoader
-	
-	第一段
-	
+		1. 第一段
 		```
 		public abstract class ExecutableArchiveLauncher extends Launcher {
 			...
@@ -247,9 +245,7 @@ git版本号：e6ee3c1
 			...
 		}
 		```
-	
-	第二段
-	
+		2. 第二段
 		```
 		public abstract class Launcher {
 			...
@@ -284,8 +280,7 @@ git版本号：e6ee3c1
 		}
 		```
 	5. Launcher#launch(java.lang.String[], java.lang.String, java.lang.ClassLoader) 启动springboot的启动类
-
-	第一段
+		1. 第一段
 	
 		```
 		protected void launch(String[] args, String launchClass, ClassLoader classLoader) throws Exception {
@@ -300,7 +295,7 @@ git版本号：e6ee3c1
 		}
 		```
 	
-	第二段
+		2. 第二段
 	
 		```
 		public class MainMethodRunner {
