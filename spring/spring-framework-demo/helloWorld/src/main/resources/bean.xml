@@ -3,7 +3,7 @@
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
        xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
 
-    <!--注入bean-->
-    <bean id="hello" class="top.ersut.spring5.Hello"></bean>
+    <!--声明一个bean-->
+    <bean id="hello" class="top.ersut.spring.Hello"></bean>
 
 </beans>

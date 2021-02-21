@@ -1,4 +1,5 @@
-﻿待验证/boot-no-ServletComponentScan/.idea/
+待验证/boot-no-ServletComponentScan/.idea/
 *.iml
 待验证/boot-ServletComponentScan/.idea/
 spring/spring5-helloWorld/.idea/
+spring/spring-framework-demo/.idea/

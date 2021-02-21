@@ -1,4 +1,4 @@
-package top.ersut.spring5;
+package top.ersut.spring;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.context.ApplicationContext;

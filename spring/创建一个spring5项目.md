@@ -43,7 +43,7 @@
 </dependency>
 ```
 ## 简单示例：通过spring调用方法
-[点击进入项目目录](./spring5-helloWorld)
+[点击进入项目目录](./spring-framework-demo/helloWorld)
 
 Hello.java
 ```

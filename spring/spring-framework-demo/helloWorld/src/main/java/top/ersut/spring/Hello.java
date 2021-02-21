@@ -1,4 +1,4 @@
-package top.ersut.spring5;
+package top.ersut.spring;
 
 public class Hello {
 
