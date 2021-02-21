@@ -5,6 +5,7 @@
 ## Spring Framework整体架构
 
 ![](./images/spring-framework.png)
+
 从图中可以看到**核心容器**包含Beans、Core、Context、SpEL各代表：
 - Beans：bean支持
 - Core：核心库
