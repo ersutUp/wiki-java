@@ -17,6 +17,7 @@
 		<module>helloWorld</module>
 		<module>IOC-DI-setxxx</module>
 		<module>IOC-DI-constructor</module>
+		<module>IOC-DI-setxxx-bean</module>
 	</modules>
 
     <dependencies>

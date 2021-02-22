@@ -9,7 +9,7 @@ public class Student {
     private String name;
 
     public void say(){
-        System.out.println("my name is "+name);;
+        System.out.println("my name is "+name);
     }
 
 }

@@ -30,7 +30,7 @@ DI是IOC中的注入属性的步骤，DI需要在创建对象的基础之上完�
 	3. 创建bean依赖对应类的无参构造方法完成创建，若没有无参构造方法将抛出`java.lang.NoSuchMethodException`异常
 	4. [示例项目](./spring-framework-demo/helloWorld)相关代码：`<bean id="hello" class="top.ersut.spring.Hello"></bean>`,
 		1. 示例中bean的唯一标识为'hello'对应的类为'top.ersut.spring5.Hello'
-2. 使用xml注入bean（DI操作）
+2. 使用xml注入属性（DI操作）
 	1. 通过setxxx方法注入
 		1.  在spring的xml配置文件中使用bean标签的子标签property进行注入
 		2.  property标签的属性
@@ -58,5 +58,15 @@ DI是IOC中的注入属性的步骤，DI需要在创建对象的基础之上完�
 		    <!--有参构造注入属性-->
 		    <constructor-arg name="name" value="ersut"></constructor-arg>
 		</bean>
+		```
+	3. 补充：注入属性时使用bean
+		1. [示例项目](./spring-framework-demo/IOC-DI-setxxx-bean)相关代码：
+		```
+	    <bean id="student" class="top.ersut.spring.ioc.Student">
+	        <!--注入属性-->
+	        <property name="teacher" ref="tea"></property>
+	    </bean>
+	
+	    <bean id="tea" class="top.ersut.spring.ioc.Teacher"></bean>
 		```
 3. 
