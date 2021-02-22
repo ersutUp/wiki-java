@@ -16,6 +16,7 @@
 	<modules>
 		<module>helloWorld</module>
 		<module>IOC-DI-setxxx</module>
+		<module>IOC-DI-constructor</module>
 	</modules>
 
     <dependencies>

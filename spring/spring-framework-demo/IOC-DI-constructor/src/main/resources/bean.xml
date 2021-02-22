@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+    <bean id="student" class="top.ersut.spring.ioc.Student">
+        <!--有参构造注入属性-->
+        <constructor-arg name="name" value="ersut"></constructor-arg>
+    </bean>
+
+</beans>
