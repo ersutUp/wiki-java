@@ -39,12 +39,12 @@ DI是IOC中的注入属性的步骤，DI需要在创建对象的基础之上完�
 			3.  value：直接赋值
 		3.  注入属性依赖属性的set方法,如果没有方法将抛出`org.springframework.beans.NotWritablePropertyException`异常
 		4.  [示例项目](./spring-framework-demo/IOC-DI-setxxx)相关代码：
-```
-<bean id="student" class="top.ersut.spring.ioc.Student">
-    <!--注入属性-->
-    <property name="name" value="wang"></property>
-</bean>
-```
+		```
+		<bean id="student" class="top.ersut.spring.ioc.Student">
+		    <!--注入属性-->
+		    <property name="name" value="wang"></property>
+		</bean>
+		```
 
 	2. 通过有参构造方法注入
 		1. 在spring的xml配置文件中使用bean标签的子标签constructor-arg进行注入
@@ -53,10 +53,10 @@ DI是IOC中的注入属性的步骤，DI需要在创建对象的基础之上完�
 			2. ref：引用现有的bean进行注入
 			3. value：直接赋值
 		3. [示例项目](./spring-framework-demo/IOC-DI-constructor)相关代码：
-```
-<bean id="student" class="top.ersut.spring.ioc.Student">
-    <!--有参构造注入属性-->
-    <constructor-arg name="name" value="ersut"></constructor-arg>
-</bean>
-```
+		```
+		<bean id="student" class="top.ersut.spring.ioc.Student">
+		    <!--有参构造注入属性-->
+		    <constructor-arg name="name" value="ersut"></constructor-arg>
+		</bean>
+		```
 3. 
