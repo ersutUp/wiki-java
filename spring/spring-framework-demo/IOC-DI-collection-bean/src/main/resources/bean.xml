@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+    <bean id="user1" class="top.ersut.spring.ioc.User">
+        <property name="name" value="wang"></property>
+    </bean>
+    <bean id="user2" class="top.ersut.spring.ioc.User">
+        <property name="name" value="ersut"></property>
+    </bean>
+
+    <bean id="collection" class="top.ersut.spring.ioc.CollectionBean">
+        <!--注入数组-->
+        <property name="array">
+            <array>
+                <ref bean="user1"></ref>
+                <ref bean="user2"></ref>
+                <ref bean="user1"></ref>
+            </array>
+        </property>
+
+        <!--注入list-->
+        <property name="list">
+            <list>
+                <ref bean="user2"></ref>
+                <ref bean="user1"></ref>
+                <ref bean="user1"></ref>
+            </list>
+        </property>
+
+        <!--注入set-->
+        <property name="set">
+            <list>
+                <ref bean="user2"></ref>
+                <ref bean="user1"></ref>
+                <ref bean="user2"></ref>
+            </list>
+        </property>
+
+        <!--注入map-->
+        <property name="map">
+            <map>
+                <entry key-ref="user1" value-ref="user2"></entry>
+                <entry key-ref="user2" value-ref="user1"></entry>
+            </map>
+        </property>
+
+    </bean>
+
+</beans>

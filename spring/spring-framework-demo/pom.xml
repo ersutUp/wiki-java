@@ -18,6 +18,9 @@
 		<module>IOC-DI-setxxx</module>
 		<module>IOC-DI-constructor</module>
 		<module>IOC-DI-setxxx-bean</module>
+		<module>IOC-DI-collection</module>
+		<module>IOC-DI-collection-bean</module>
+		<module>IOC-FactoryBean</module>
 	</modules>
 
     <dependencies>

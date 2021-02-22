@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+    <bean id="collection" class="top.ersut.spring.ioc.Collection">
+        <!--注入数组-->
+        <property name="array">
+            <array>
+                <value>a</value>
+                <value>b</value>
+                <value>c</value>
+                <value>d</value>
+                <value>e</value>
+            </array>
+        </property>
+
+        <!--注入list-->
+        <property name="list">
+            <list>
+                <value>a</value>
+                <value>b</value>
+                <value>a</value>
+                <value>d</value>
+                <value>e</value>
+            </list>
+        </property>
+
+        <!--注入set-->
+        <property name="set">
+            <list>
+                <value>a</value>
+                <value>b</value>
+                <value>c</value>
+                <value>e</value>
+                <value>e</value>
+            </list>
+        </property>
+
+        <!--注入map-->
+        <property name="map">
+            <map>
+                <entry key="97" value="a"></entry>
+                <entry key="98" value="b"></entry>
+                <entry key="99" value="c"></entry>
+                <entry key="100" value="d"></entry>
+                <entry key="101" value="e"></entry>
+            </map>
+        </property>
+
+    </bean>
+
+</beans>
