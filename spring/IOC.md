@@ -229,3 +229,180 @@ public class UserFactory implements FactoryBean<User> {
     }
 }
 ```
+
+## Bean作用域
+
+1. Bean的作用域分为两种，一种是单实例，另一种是多实例
+	1. 单实例是在加载配置文件时创建的bean，并放入bean单例缓存池
+	2. 多实例是在获取bean时(getBean方法)创建的。
+2. 默认情况下是单实例的。
+	1. 示例代码：
+		1. 配置文件：
+		```
+		<bean id="beanDefaultScope" class="top.ersut.spring.ioc.BeanDefaultScope"></bean>
+		```
+		2. 运行代码：
+		```
+	    @Test
+	    public void test(){
+	        ApplicationContext applicationContext = new GenericXmlApplicationContext("bean.xml");
+	        BeanDefaultScope beanDefaultScope1 = applicationContext.getBean("beanDefaultScope",BeanDefaultScope.class);
+	        BeanDefaultScope beanDefaultScope2 = applicationContext.getBean("beanDefaultScope",BeanDefaultScope.class);
+	
+	        System.out.println("beanDefaultScope1:"+beanDefaultScope1);
+	        System.out.println("beanDefaultScope2:"+beanDefaultScope2);
+	        System.out.println("地址是否相等:"+(beanDefaultScope1==beanDefaultScope2));
+	    }
+		```
+		3. 运行结果：
+		```
+		beanDefaultScope1:top.ersut.spring.ioc.BeanDefaultScope@294425a7
+		beanDefaultScope2:top.ersut.spring.ioc.BeanDefaultScope@294425a7
+		地址是否相等:true
+		```
+3. 设置为多实例作用域
+	1. 通过bean标签的scope属性设置
+		1. 可选项：
+			1. prototype：多实例
+			2. singleton：单实例（默认值）
+	3. 示例代码：
+		1. 配置文件
+		```
+	    <!--多实例-->
+	    <bean id="beanScopePrototype" class="top.ersut.spring.ioc.BeanScopePrototype" scope="prototype"></bean>
+		```
+		2. 运行代码
+		```
+	    @Test
+	    public void test(){
+	        ApplicationContext applicationContext = new GenericXmlApplicationContext("bean.xml");
+	        BeanScopePrototype beanScopePrototype1 = applicationContext.getBean("beanScopePrototype",BeanScopePrototype.class);
+	        BeanScopePrototype beanScopePrototype2 = applicationContext.getBean("beanScopePrototype",BeanScopePrototype.class);
+	
+	        System.out.println("beanScopePrototype1:"+beanScopePrototype1);
+	        System.out.println("beanScopePrototype2:"+beanScopePrototype2);
+	        System.out.println("地址是否相等:"+(beanScopePrototype1==beanScopePrototype2));
+	    }
+		```
+		3. 运行结果
+		```
+		beanScopePrototype1:top.ersut.spring.ioc.BeanScopePrototype@9f116cc
+		beanScopePrototype2:top.ersut.spring.ioc.BeanScopePrototype@12468a38
+		地址是否相等:false
+		```
+4. [示例项目](./spring-framework-demo/IOC-Bean-scope)
+
+## Bean的生命周期
+
+### BeanPostProcessor介绍
+BeanPostProcessor也称为Bean后置处理器，它是Spring中定义的接口，在每个Bean的创建过程中回调BeanPostProcessor中定义的两个方法。
+
+源码如下：
+```
+public interface BeanPostProcessor {
+
+	@Nullable
+	default Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
+		return bean;
+	}
+
+	@Nullable
+	default Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
+		return bean;
+	}
+
+}
+```
+
+### Bean的生命周期
+1. Bean实例化（调用类的构造方法）
+2. 注入属性（DI）
+3. 调用BeanPostProcessor的预初始化方法（postProcessBeforeInitialization方法）
+4. 调用自定义初始化方法
+5. 调用BeanPostProcessor的初始化后方法（postProcessAfterInitialization方法）
+6. Bean可以使用了
+7. 上下文销毁时，调用自定义销毁方法
+
+### 配置bean的初始化方法 和 销毁方法
+1. 配置初始化方法
+	1. 设置bean标签的属性init-method，其值为方法名
+	2. 示例`<bean id="beanLifeCycle" class="top.ersut.spring.ioc.BeanLifeCycle" init-method="init"/>`
+2. 配置销毁方法
+	1. 设置bean标签的属性destroy-method，其值为方法名
+	2. 示例`<bean id="beanLifeCycle" class="top.ersut.spring.ioc.BeanLifeCycle" destroy-method="destroy"/>`
+
+### [代码示例](./spring-framework-demo/IOC-Bean-life-cycle)
+后置处理器：
+```
+public class MyBeanPostProcessor implements BeanPostProcessor {
+
+    @Override
+    public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
+        System.out.println("3. 调用BeanPostProcessor的预初始化方法（postProcessBeforeInitialization方法）");
+        return bean;
+    }
+
+    @Override
+    public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
+        System.out.println("5. 调用BeanPostProcessor的初始化后方法（postProcessAfterInitialization方法）");
+        return bean;
+    }
+}
+```
+
+Bean对应的类：
+```
+public class BeanLifeCycle {
+
+    public BeanLifeCycle() {
+        System.out.println("1. Bean实例化（调用类的构造方法）");
+    }
+
+    private String str;
+
+    public void setStr(String str) {
+        System.out.println("2. 注入属性（DI）");
+        this.str = str;
+    }
+
+    public void init(){
+        System.out.println("4. 调用自定义初始化方法");
+    }
+
+    public void destroy(){
+        System.out.println("7. 上下文销毁时，调用自定义销毁方法");
+    }
+}
+```
+
+spring配置：
+```
+<bean id="beanLifeCycle" class="top.ersut.spring.ioc.BeanLifeCycle" init-method="init" destroy-method="destroy">
+    <property name="str" value="test"></property>
+</bean>
+
+<bean id="myBeanPostProcessor" class="top.ersut.spring.ioc.MyBeanPostProcessor"/>
+```
+
+测试方法：
+```
+@Test
+void test() {
+    GenericXmlApplicationContext context = new GenericXmlApplicationContext("bean.xml");
+    BeanLifeCycle beanLifeCycle = context.getBean("beanLifeCycle",BeanLifeCycle.class);
+
+    //销毁\关闭上下文
+    context.close();
+}
+```
+
+运行结果：
+```
+1. Bean实例化（调用类的构造方法）
+2. 注入属性（DI）
+3. 调用BeanPostProcessor的预初始化方法（postProcessBeforeInitialization方法）
+4. 调用自定义初始化方法
+5. 调用BeanPostProcessor的初始化后方法（postProcessAfterInitialization方法）
+7. 上下文销毁时，调用自定义销毁方法
+```
+

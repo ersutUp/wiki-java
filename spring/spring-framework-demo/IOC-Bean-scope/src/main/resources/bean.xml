@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+    <!--单实例-->
+    <bean id="beanDefaultScope" class="top.ersut.spring.ioc.BeanDefaultScope"></bean>
+
+    <!--多实例-->
+    <bean id="beanScopePrototype" class="top.ersut.spring.ioc.BeanScopePrototype" scope="prototype"></bean>
+
+</beans>

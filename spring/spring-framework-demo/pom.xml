@@ -21,6 +21,8 @@
 		<module>IOC-DI-collection</module>
 		<module>IOC-DI-collection-bean</module>
 		<module>IOC-FactoryBean</module>
+		<module>IOC-Bean-scope</module>
+		<module>IOC-Bean-life-cycle</module>
 	</modules>
 
     <dependencies>
