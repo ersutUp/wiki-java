@@ -185,7 +185,26 @@ DI是IOC中的注入属性的步骤，DI需要在创建对象的基础之上完�
 	        </property>
 			```
 		5. [示例项目](./spring-framework-demo/IOC-DI-collection-bean)
-5. 
+5. 引入外部配置
+	1. 添加名称空间
+	```
+	<beans
+       xmlns:context="http://www.springframework.org/schema/context"
+       xsi:schemaLocation="http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd">
+	```
+	2. 加载配置文件`<context:property-placeholder location="config.properties"/>`
+		1. config.properties文件内容：
+		```
+		name=wang
+		```
+	3. 使用
+	```
+	<bean id="student" class="top.ersut.spring.ioc.Student">
+        <!--注入属性-->
+        <property name="name" value="${name}"></property>
+    </bean>
+	```
+	4. [示例项目](./spring-framework-demo/xml-import)
 
 
 ## FactoryBean（工厂bean）
@@ -295,7 +314,7 @@ public class UserFactory implements FactoryBean<User> {
 ## Bean的生命周期
 
 ### BeanPostProcessor介绍
-BeanPostProcessor也称为Bean后置处理器，它是Spring中定义的接口，在每个Bean的创建过程中回调BeanPostProcessor中定义的两个方法。
+BeanPostProcessor也称为Bean后置处理器，它是Spring中定义的接口，在**每个**Bean的创建过程中回调BeanPostProcessor中定义的两个方法。
 
 源码如下：
 ```
@@ -406,3 +425,4 @@ void test() {
 7. 上下文销毁时，调用自定义销毁方法
 ```
 
+## 注解方式管理Bean
