@@ -454,9 +454,11 @@ void test() {
 2. @Repository:适用于持久层
 3. @Service:适用于服务层
 4. @Controller:适用于控制层
+
 **以上4个注解功能一样，只是使用的地方不一样**
 
 代码示例1：
+
 	```
 	//可以设置bean的名称为userServer2
 	@Service("userServer2")
@@ -464,6 +466,7 @@ void test() {
 	}
 	```
 代码示例2：
+
 	```
 	//如果不设置bean的名称，那么取类名将首字母小写作为Bean的名称，也就是userDao
 	@Repository
