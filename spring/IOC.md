@@ -426,3 +426,175 @@ void test() {
 ```
 
 ## 注解方式管理Bean
+
+### 什么是注解
+1. 注解用来标记代码，这个标记是可编译器、运行期被读取的。
+3. 注解是JDK5引入的新特新
+2. 格式：@注解名称[(key=value,...)]
+4. 注解可以用在types（类、接口、枚举、注解类）、方法上、属性上，具体可以用在这三个那几个上是可控的
+5. 示例：
+	1. 示例1:单元测试
+	```
+	@Test
+	void world() {
+	}
+	```
+	2. 示例2:子类重写父类的方法
+	```
+    @Override
+    public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
+	}
+	```
+
+### 注解方式管理Bean的好处
+1. 简化xml配置
+
+### spring创建Bean的注解
+1. @Component:适用于组件
+2. @Repository:适用于持久层
+3. @Service:适用于服务层
+4. @Controller:适用于控制层
+**以上4个注解功能一样，只是使用的地方不一样**
+
+代码示例1：
+	```
+	//可以设置bean的名称为userServer2
+	@Service("userServer2")
+	public class UserServer {
+	}
+	```
+代码示例2：
+	```
+	//如果不设置bean的名称，那么取类名将首字母小写作为Bean的名称，也就是userDao
+	@Repository
+	public class UserDao {
+	}
+	```
+
+### 注解代替xml
+使用@Configuration标记类使其成为配置类，这种方式是在代替xml配置文件
+
+代码示例：
+```
+@Configuration
+public class ProjectConfig {
+}
+```
+
+### 创建Bean的注解生效
+1. 引入依赖包：
+	```
+	<dependency>
+        <groupId>org.springframework</groupId>
+        <artifactId>spring-aop</artifactId>
+        <version>${spring.version}</version>
+    </dependency>
+	```
+2. 使用@ComponentScan注解进行配置使注解生效
+	1. **具体那些包下注解生效**需要用到 属性 basePackages,他接收一个String数组，也就是说他可以设置多个包,代码示例：
+	```
+	@Configuration
+	@ComponentScan(basePackages = {"top.ersut.spring.ioc.dao","top.ersut.spring.ioc.server"})
+	public class ProjectConfig {
+	}
+	```
+
+### 自动注入bean的注解
+1. @Autowired：根据属性的类型自动注入
+	1. 可使用在属性上或者方法上
+	2. 示例：根据类型注入
+	```
+    /**可以放在属性上*/
+    @Autowired
+    private UserDao userDao;
+    
+    private UserDao userDao2;
+    @Autowired
+    public void setUserDao2(UserDao userDao2) {
+        this.userDao2 = userDao2;
+    }
+	```
+
+	2. @Qualifier:这俩个配合使用可以根据Bean的名称进行自动注入
+		1. 示例：根据Bean的名称注入
+		```
+	    @Autowired
+	    @Qualifier("userDao")
+	    private UserDao userDao3;
+		```
+
+2. @Resource:可以根据类型注入，也可以根据Bean的名称注入
+	1. 示例1：根据类型注入
+	```
+    @Resource
+    private UserDao userDao4;
+	```
+	2. 示例2：根据Bean的名称注入
+	```
+    @Resource(name = "userDao")
+    private UserDao userDao5;
+	```
+
+3. @Value：普通属性注入值
+	1. 示例：
+	```
+    @Value("wang")
+    private String name;
+	```
+
+### [示例项目](./spring-framework-demo/IOC-annotation),部分代码：
+1. UserDao
+	```
+	@Repository
+	public class UserDao {
+	    @Value("wang")
+	    private String name;
+	
+	    public String getName() {
+	        System.out.println("UserDao.getName()");
+	        return name;
+	    }
+	}
+	```
+
+1. UserServer
+	```
+	@Service("userServer2")
+	public class UserServer {
+		...	    
+		public void selectUserName(){
+	        userDao.getName();
+	        userDao2.getName();
+	        userDao3.getName();
+	        userDao4.getName();
+	        userDao5.getName();
+	        System.out.println("UserServer.selectUserName");
+	    }
+	}
+	```
+
+2. 测试方法
+	```
+	@Test
+    void selectUserName() {
+        //实现类使用 AnnotationConfigApplicationContext
+        ApplicationContext context = new AnnotationConfigApplicationContext(ProjectConfig.class);
+        UserServer userServer = context.getBean("userServer2", UserServer.class);
+        userServer.selectUserName();
+    }
+	```
+
+4. 输出内容
+	```
+	UserDao.getName()
+	UserDao.getName()
+	UserDao.getName()
+	UserDao.getName()
+	UserDao.getName()
+	UserServer.selectUserName
+	```
+
+### 将Bean设置为多例模式
+
+
+### Bean的初始化方法和销毁方法

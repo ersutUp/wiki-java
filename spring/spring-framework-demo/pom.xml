@@ -24,6 +24,7 @@
 		<module>IOC-Bean-scope</module>
 		<module>IOC-Bean-life-cycle</module>
 		<module>xml-import</module>
+		<module>IOC-annotation</module>
 	</modules>
 
     <dependencies>
