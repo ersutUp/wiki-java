@@ -8,5 +8,4 @@ public class Teacher {
         System.out.println("this is teacher");
     }
 
-    List
 }
