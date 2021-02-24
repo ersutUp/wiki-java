@@ -518,7 +518,7 @@ public class ProjectConfig {
     }
 	```
 
-	2. @Qualifier:这俩个配合使用可以根据Bean的名称进行自动注入
+	3. @Qualifier:这俩个配合使用可以根据Bean的名称进行自动注入
 		1. 示例：根据Bean的名称注入
 		```
 	    @Autowired
