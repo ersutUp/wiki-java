@@ -311,7 +311,7 @@ public class UserFactory implements FactoryBean<User> {
 		```
 4. [示例项目](./spring-framework-demo/IOC-Bean-scope)
 
-## Bean的生命周期
+## Bean的生命周期(xml配置版本)
 
 ### BeanPostProcessor介绍
 BeanPostProcessor也称为Bean后置处理器，它是Spring中定义的接口，在**每个**Bean的创建过程中回调BeanPostProcessor中定义的两个方法。
@@ -350,7 +350,7 @@ public interface BeanPostProcessor {
 	1. 设置bean标签的属性destroy-method，其值为方法名
 	2. 示例`<bean id="beanLifeCycle" class="top.ersut.spring.ioc.BeanLifeCycle" destroy-method="destroy"/>`
 
-### [代码示例](./spring-framework-demo/IOC-Bean-life-cycle)
+### <div id="xml-life-cycle"></div>[代码示例](./spring-framework-demo/IOC-Bean-life-cycle)
 后置处理器：
 ```
 public class MyBeanPostProcessor implements BeanPostProcessor {
@@ -485,16 +485,8 @@ public class ProjectConfig {
 ```
 
 ### 创建Bean的注解生效
-1. 引入依赖包：
-	```
-	<dependency>
-        <groupId>org.springframework</groupId>
-        <artifactId>spring-aop</artifactId>
-        <version>${spring.version}</version>
-    </dependency>
-	```
-2. 使用@ComponentScan注解进行配置使注解生效
-	1. **具体那些包下注解生效**需要用到 属性 basePackages,他接收一个String数组，也就是说他可以设置多个包,代码示例：
+使用@ComponentScan注解进行配置使注解生效，**具体那些包下注解生效**需要用到 属性 basePackages,他接收一个String数组，也就是说他可以设置多个包,代码示例：
+
 	```
 	@Configuration
 	@ComponentScan(basePackages = {"top.ersut.spring.ioc.dao","top.ersut.spring.ioc.server"})
@@ -539,7 +531,7 @@ public class ProjectConfig {
 	```
 
 3. @Value：普通属性注入值
-	1. 示例：
+	1. 示例：添加在属性上（也可以添加在set方法上此处不再做演示）
 	```
     @Value("wang")
     private String name;
@@ -597,7 +589,85 @@ public class ProjectConfig {
 	UserServer.selectUserName
 	```
 
-### 将Bean设置为多例模式
+### 使用注解将Bean设置为多例模式
+在类上添加@Scope注解，其value属性设置为prototype
 
+[示例项目(Bean的作用域注解版)](./spring-framework-demo/IOC-Bean-scope-annotation),关键代码：
 
-### Bean的初始化方法和销毁方法
+```
+@Component
+@Scope("prototype")
+public class BeanScopePrototype {
+}
+
+```
+
+### 使用注解设置Bean的初始化方法和销毁方法
+1. 初始化方法
+	1. 在方法上添加@PostConstruct注解那么这个方法将变成初始化方法
+	2. 代码示例：
+	```
+	@PostConstruct
+    public void init(){
+        System.out.println("4. 调用自定义初始化方法");
+    }
+	```
+2. 摧毁方法
+	1. 在方法上添加@PreDestroy注解那么这个方法将变成摧毁方法
+	2. 代码示例：
+	```
+    @PreDestroy
+    public void destroy(){
+        System.out.println("7. 上下文销毁时，调用自定义销毁方法");
+    }
+	```
+3. [示例项目(Bean的生命周期注解版)](./spring/spring-framework-demo/IOC-Bean-life-cycle-annotation),部分代码：
+	1. 配置类
+	```
+	@Configuration
+	@ComponentScan(basePackages = "top.ersut.spring")
+	public class ProjectConf {
+	}
+	```
+	2. MyBeanPostProcessor
+	```
+	@Component
+	public class MyBeanPostProcessor implements BeanPostProcessor {
+	
+	    @Override
+	    public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
+	        System.out.println("3. 调用BeanPostProcessor的预初始化方法（postProcessBeforeInitialization方法）");
+	        return bean;
+	    }
+	
+	    @Override
+	    public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
+	        System.out.println("5. 调用BeanPostProcessor的初始化后方法（postProcessAfterInitialization方法）");
+	        return bean;
+	    }
+	}
+	```
+	3. 测试用例
+	```
+	@Test
+    void test() {
+        AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(ProjectConf.class);
+        BeanLifeCycle beanLifeCycle = context.getBean(BeanLifeCycle.class);
+
+        //销毁\关闭上下文
+        context.close();
+    }
+	```
+	4. 输出内容
+	```
+		3. 调用BeanPostProcessor的预初始化方法（postProcessBeforeInitialization方法）
+		5. 调用BeanPostProcessor的初始化后方法（postProcessAfterInitialization方法）
+		1. Bean实例化（调用类的构造方法）
+		2. 注入属性（DI）
+		3. 调用BeanPostProcessor的预初始化方法（postProcessBeforeInitialization方法）
+		4. 调用自定义初始化方法
+		5. 调用BeanPostProcessor的初始化后方法（postProcessAfterInitialization方法）
+		7. 上下文销毁时，调用自定义销毁方法
+	```
+	5. 疑问:与[Bean的生命周期注解版](#xml-life-cycle)的输出结果相比,注解版的输出结果多了两行这是为什么
+		1. 因为配置类也是一个bean所以在加载配置类的时候执行了一次后置处理器（MyBeanPostProcessor）

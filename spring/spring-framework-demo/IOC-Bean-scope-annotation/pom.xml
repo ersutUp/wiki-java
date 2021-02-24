@@ -13,8 +13,10 @@
 	
 	<modelVersion>4.0.0</modelVersion>
     <groupId>top.ersut.spring</groupId>
-    <artifactId>IOC-annotation</artifactId>
+    <artifactId>IOC-Bean-scope-annotation</artifactId>
     <version>0.0.1-SNAPSHOT</version>
+    <name>IOC-Bean-scope-annotation</name>
+    <packaging>jar</packaging>
     <build>
         <plugins>
             <plugin>
@@ -27,7 +29,6 @@
             </plugin>
         </plugins>
     </build>
-    <name>IOC-annotation</name>
-	<packaging>jar</packaging>
+	
 
 </project>
