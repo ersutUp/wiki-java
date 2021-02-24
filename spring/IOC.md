@@ -621,7 +621,7 @@ public class BeanScopePrototype {
         System.out.println("7. 上下文销毁时，调用自定义销毁方法");
     }
 	```
-3. [示例项目(Bean的生命周期注解版)](./spring/spring-framework-demo/IOC-Bean-life-cycle-annotation),部分代码：
+3. [示例项目(Bean的生命周期注解版)](./spring-framework-demo/IOC-Bean-life-cycle-annotation),部分代码：
 	1. 配置类
 	```
 	@Configuration
