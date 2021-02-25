@@ -9,7 +9,7 @@
 	<packaging>pom</packaging>
 
     <properties>
-        <java.version>1.8</java.version>
+        <jdk.version>1.8</jdk.version>
         <spring.version>5.3.4</spring.version>
     </properties>
 
@@ -27,7 +27,22 @@
 		<module>IOC-annotation</module>
 		<module>IOC-Bean-scope-annotation</module>
 		<module>IOC-Bean-life-cycle-annotation</module>
+		<module>AOP-dynamicProxy-JDK</module>
+		<module>AOP-dynamicProxy-CGLIB</module>
 	</modules>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<source>8</source>
+					<target>8</target>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
 
     <dependencies>
 		<dependency>
