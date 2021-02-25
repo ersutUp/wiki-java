@@ -7,7 +7,7 @@
 1. 以管理员身份运行命令行，执行 `java -classpath "%JAVA_HOME%/lib/sa-jdi.jar" sun.jvm.hotspot.HSDB`
 2. 点击 File > Attach to HotSpot process
 ![](./images/athp-option.jpg)
-3. 查询进程ID `jsp -l` , 选择对应进程ID
+3. 查询进程ID `jps -l` , 选择对应进程ID
 ![](./images/jsp.jpg)
 4. 填入弹窗，点击OK
 ![](./images/athp-option-layer.jpg)
