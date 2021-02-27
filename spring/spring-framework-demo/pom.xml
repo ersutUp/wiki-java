@@ -29,6 +29,7 @@
 		<module>IOC-Bean-life-cycle-annotation</module>
 		<module>AOP-dynamicProxy-JDK</module>
 		<module>AOP-dynamicProxy-CGLIB</module>
+		<module>AOP-aspectj</module>
 	</modules>
 
 	<build>

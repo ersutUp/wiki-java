@@ -27,5 +27,7 @@ class MyInvocationHandlerTest {
         userServerProxy.add();
         System.out.println();
         userServerProxy.all();
+        System.out.println();
+
     }
 }

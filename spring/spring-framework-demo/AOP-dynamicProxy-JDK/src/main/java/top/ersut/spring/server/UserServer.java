@@ -6,4 +6,9 @@ public interface UserServer {
 
     void all();
 
+    //静态方法无法代理
+    public static void staticMethod() {
+        System.out.println(UserServer.class.getSimpleName()+".staticMethod:run");
+    }
+
 }

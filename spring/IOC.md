@@ -313,7 +313,7 @@ public class UserFactory implements FactoryBean<User> {
 
 ## Bean的生命周期(xml配置版本)
 
-### BeanPostProcessor介绍
+### BeanPostProcessor（Bean后置处理器）介绍
 BeanPostProcessor也称为Bean后置处理器，它是Spring中定义的接口，在**每个**Bean的创建过程中回调BeanPostProcessor中定义的两个方法。
 
 源码如下：
