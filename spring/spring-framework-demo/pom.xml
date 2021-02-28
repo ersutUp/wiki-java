@@ -30,6 +30,8 @@
 		<module>AOP-dynamicProxy-JDK</module>
 		<module>AOP-dynamicProxy-CGLIB</module>
 		<module>AOP-aspectj</module>
+		<module>AOP-xml</module>
+		<module>AOP-annotation</module>
 	</modules>
 
 	<build>

@@ -13,9 +13,9 @@
 	
 	<modelVersion>4.0.0</modelVersion>
     <groupId>top.ersut.spring</groupId>
-    <artifactId>AOP-aspectj</artifactId>
+    <artifactId>AOP-xml</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>AOP-aspectj</name>
+    <name>AOP-xml</name>
 	<packaging>jar</packaging>
 
     <properties>
@@ -23,6 +23,12 @@
     </properties>
 
     <dependencies>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-aop</artifactId>
+            <version>${spring.version}</version>
+        </dependency>
+
         <!-- aspectj依赖包 -->
         <dependency>
             <groupId>org.aspectj</groupId>
@@ -35,33 +41,7 @@
             <artifactId>aspectjweaver</artifactId>
             <version>${aspectj.version}</version>
         </dependency>
-    </dependencies>
 
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>aspectj-maven-plugin</artifactId>
-                <version>1.11</version>
-                <configuration>
-                    <complianceLevel>1.8</complianceLevel>
-                    <source>1.8</source>
-                    <target>1.8</target>
-                    <showWeaveInfo>true</showWeaveInfo>
-                    <verbose>true</verbose>
-                    <Xlint>ignore</Xlint>
-                    <encoding>UTF-8</encoding>
-                </configuration>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>compile</goal>
-                            <goal>test-compile</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-        </plugins>
-    </build>
+    </dependencies>
 
 </project>

@@ -1,4 +1,4 @@
-package top.ersut.aspectj;
+package top.ersut.spring.aop;
 
 import java.util.Objects;
 
@@ -8,8 +8,7 @@ public class Admin {
         this.privateMethod();
     }
 
-    //final方法可以代理
-    public final boolean login(String user){
+    public boolean login(String user){
         System.out.println("登录校验中...");
         //制造异常
 //        int i = 10/0;
@@ -19,12 +18,12 @@ public class Admin {
         return false;
     }
 
-    //私有方法可以代理
+    //由于spring aop 是通过动态代理实现的切面，所以私有方法不能代理
     private void privateMethod(){
         System.out.println("私有方法");
     }
 
-    //静态方法可以代理
+    //由于spring aop 是通过动态代理实现的切面，所以静态方法不能代理
     public static void staticMethod(){
         System.out.println("静态方法");
     }

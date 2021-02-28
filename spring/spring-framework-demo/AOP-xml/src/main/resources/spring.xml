@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+       http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd">
+
+    <!-- 创建bean -->
+    <bean id="admin" class="top.ersut.spring.aop.Admin"></bean>
+    <bean id="adminAOP" class="top.ersut.spring.aop.AdminAOP"></bean>
+
+    <!-- aop的配置 -->
+    <aop:config>
+        <!-- 声明一个切入点表达式 -->
+        <aop:pointcut id="logonPoint" expression="execution(* top.ersut.spring.aop.Admin.login(..))"/>
+
+        <!-- 创建一个切面类 -->
+        <aop:aspect ref="adminAOP">
+            <!-- 声明具体是什么通知 -->
+            <aop:before method="before" pointcut="execution(* top.ersut.spring.aop.Admin.*(..))"></aop:before>
+            <aop:after method="after" pointcut-ref="logonPoint"></aop:after>
+            <aop:after-returning method="afterReturn" pointcut-ref="logonPoint"></aop:after-returning>
+            <aop:after-throwing method="afterThrowing" pointcut-ref="logonPoint"></aop:after-throwing>
+
+            <!-- spring AOP 的环绕通知与最终通知、返回通知、异常通知不冲突 -->
+            <aop:around method="around" pointcut-ref="logonPoint"></aop:around>
+        </aop:aspect>
+
+    </aop:config>
+    <!-- 开启aop -->
+    <aop:aspectj-autoproxy></aop:aspectj-autoproxy>
+
+</beans>

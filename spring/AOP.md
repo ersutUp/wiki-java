@@ -361,7 +361,39 @@ public void afterThrowing(JoinPoint joinPoint){
 ```
 
 ### [示例](./spring-framework-demo/AOP-aspectj),静态编织的体现
-切入点方法源码与字节码比较
+
+**aspectj的静态编织依赖maven插件或其他插件实现**，maven相关代码：
+
+```
+<build>
+    <plugins>
+        <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>aspectj-maven-plugin</artifactId>
+            <version>1.11</version>
+            <configuration>
+                <complianceLevel>1.8</complianceLevel>
+                <source>1.8</source>
+                <target>1.8</target>
+                <showWeaveInfo>true</showWeaveInfo>
+                <verbose>true</verbose>
+                <Xlint>ignore</Xlint>
+                <encoding>UTF-8</encoding>
+            </configuration>
+            <executions>
+                <execution>
+                    <goals>
+                        <goal>compile</goal>
+                        <goal>test-compile</goal>
+                    </goals>
+                </execution>
+            </executions>
+        </plugin>
+    </plugins>
+</build>
+```
+
+**切入点方法源码与字节码比较**
 
 ![](./images/aspectj-source-class.png)
 
@@ -369,7 +401,6 @@ public void afterThrowing(JoinPoint joinPoint){
 
 AdminAOP.java
 ```
-
 @Aspect
 public class AdminAOP{
 
@@ -408,5 +439,127 @@ public class AdminAOP{
 
 ### 依赖包
 
+```
+<dependency>
+    <groupId>org.springframework</groupId>
+    <artifactId>spring-aop</artifactId>
+    <version>${spring.version}</version>
+</dependency>
+
+<!-- aspectj依赖包 -->
+<dependency>
+    <groupId>org.aspectj</groupId>
+    <artifactId>aspectjrt</artifactId>
+    <version>${aspectj.version}</version>
+</dependency>
+<dependency>
+    <groupId>org.aspectj</groupId>
+    <artifactId>aspectjweaver</artifactId>
+    <version>${aspectj.version}</version>
+</dependency>
+```
+
+### 将[aspectj示例](./spring-framework-demo/AOP-aspectj)调整为[Spring AOP实现](./spring-framework-demo/AOP-annotation)
+1. 去除aspectj静态编织的maven插件
+2. 将代理类和切面类变为Bean,类上添加@Component注解
+	1. Admin.java
+		```
+		@Component
+		public class Admin {
+			...
+		}
+		```
+
+	2. AdminAOP.java
+		```
+		@Component
+		@Aspect
+		public class AdminAOP{
+			...
+		}
+		```
+3. 创建配置类并开启AOP,@EnableAspectJAutoProxy注解开启Spring AOP
+	```
+	@Configuration
+	@ComponentScan(basePackages = {"top.ersut.spring.aop"})
+	//开启Aop
+	@EnableAspectJAutoProxy
+	public class ProjectConf {
+	}
+	
+	```
+
+4. 修改单元测试
+	```
+	@Test
+	void login() {
+	    ApplicationContext context = new AnnotationConfigApplicationContext(ProjectConf.class);
+	    Admin admin = context.getBean(Admin.class);
+	
+	    System.out.println();
+	
+	    Boolean isLogin = admin.login("wang");
+	    Assertions.assertTrue(isLogin);
+	
+	    System.out.println();
+	
+	    Admin.staticMethod();
+	}
+	```
+5. 输出结果
+	
+	```
+	私有方法
+	
+	前置环绕通知：login
+	前置通知：login
+	登录校验中...
+	返回通知：login
+	最终通知：login
+	后置环绕通知：login
+	
+	静态方法
+	```
+	1. 由于spring aop 是通过动态代理实现的切面，所以静态方法、私有方法、final方法不能代理
+	2. spring AOP 的环绕通知与最终通知、返回通知、异常通知不冲突
+
+### 切面的顺序（@Order）
+通过@Order注解可以修改对同一个切入点的多个切面类进行排序，数值约大的越接近切入点的逻辑,示例：
+
+
+AdminAOP.java
+```
+
+@Order(2)
+@Component
+@Aspect
+public class AdminAOP{
+	...
+}
+```
+
+AdminAOP2.java
+```
+@Order(1)
+@Component
+@Aspect
+public class AdminAOP2 {
+	...
+}
+```
+
+执行逻辑
+```
+AdminAOP2的通知
+AdminAOP的通知
+切入点的逻辑
+AdminAOP的通知
+AdminAOP2的通知
+```
+
+### [注解式配置示例](./spring-framework-demo/AOP-annotation)
+
+### [xml式配置](./spring-framework-demo/AOP-xml),了解就ok
 
 ## JDK动态代理、CGLIB动态代理、AspectJ 与 Spring AOP 之间的关系
+Spring AOP 修改了 AspectJ 框架的部分实现，将 AspectJ 的静态编织调整为动态代理(JDK、CGLIB)实现。
