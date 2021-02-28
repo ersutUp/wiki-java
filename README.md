@@ -14,5 +14,5 @@
 	- [动态代理的两种方式](./spring/AOP.md#动态代理的两种方式)
 	- [AOP专业术语](./spring/AOP.md#专业术语)
 	- [aspectj](./spring/AOP.md#aspectj)
-	- [Spring AOP示例](./spring/AOP.md#Spring AOP示例)
+	- [Spring AOP示例](./spring/AOP.md#spring-aop示例)
 	- [JDK动态代理、CGLIB动态代理、AspectJ 与 Spring AOP 之间的关系](./spring/AOP.md#jdk动态代理cglib动态代理aspectj-与-spring-aop-之间的关系)
