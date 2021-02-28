@@ -9,23 +9,25 @@ import java.util.Objects;
 @Aspect
 public class AdminAOP{
 
+    @Pointcut("execution(* top.ersut.aspectj.Admin.login(..))")
+    public void loginPointcut(){}
 
     @Before("execution(* top.ersut.aspectj.Admin.*(..))")
     public void before(JoinPoint joinPoint){
         System.out.println("前置通知："+joinPoint.getSignature().getName());
     }
 
-    @After("execution(* top.ersut.aspectj.Admin.login(..))")
+    @After("loginPointcut()")
     public void after(JoinPoint joinPoint){
         System.out.println("最终通知："+joinPoint.getSignature().getName());
     }
 
-    @AfterReturning("execution(* top.ersut.aspectj.Admin.login(..))")
+    @AfterReturning("loginPointcut()")
     public void afterReturn(JoinPoint joinPoint){
         System.out.println("返回通知："+joinPoint.getSignature().getName());
     }
 
-    @AfterThrowing("execution(* top.ersut.aspectj.Admin.login(..))")
+    @AfterThrowing("loginPointcut()")
     public void afterThrowing(JoinPoint joinPoint){
         System.out.println("异常通知："+joinPoint.getSignature().getName());
     }

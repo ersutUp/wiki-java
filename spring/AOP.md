@@ -299,8 +299,9 @@ Spring AOP底层通过动态代理进行功能扩展
 - @AfterReturning：返回通知的逻辑
 - @AfterThrowing：异常通知的逻辑
 - @Around：环绕通知的逻辑
+- @Pointcut：定义切入点，供通知类使用
 
-其总通知类注解的value属性是一个切入点表达式
+其中通知类注解的value属性是一个**切入点表达式或定义的切入点**
 
 ### 切入点表达式写法
 格式：execution([访问修饰符] 返回值 全类名.方法名(参数列表))
@@ -320,9 +321,44 @@ Spring AOP底层通过动态代理进行功能扩展
 |匹配前缀为‘log’的所有方法|public boolean top.ersut.aspectj.Admin.log*(..)|
 |匹配所有方法| \* \*..\*.\*(..)|
 
+**可以结合 &&、||、！一同使用**,示例：`execution(* top.ersut.aspectj.Admin.login(..)||* top.ersut.aspectj.Admin.loginOut(..))`
 
-### 注意事项
+#### 注意事项
 AspectJ中环绕通知与最终通知、返回通知、异常通知冲突
+
+### 切入点定义(@Pointcut)以及使用
+
+#### 定义
+在方法上添加@Pointcut注解并配置切入点表达式，这样一个切入点就定义成功。方法名作为这个切入点的名称，供通知类注解使用。
+
+示例:
+
+```
+@Pointcut("execution(* top.ersut.aspectj.Admin.login(..))")
+public void loginPointcut(){}
+```
+
+#### 使用
+在通知类注解的value属性中配置切入点的方法名，即引用成功
+
+示例：
+
+```
+@After("loginPointcut()")
+public void after(JoinPoint joinPoint){
+    System.out.println("最终通知："+joinPoint.getSignature().getName());
+}
+
+@AfterReturning("loginPointcut()")
+public void afterReturn(JoinPoint joinPoint){
+    System.out.println("返回通知："+joinPoint.getSignature().getName());
+}
+
+@AfterThrowing("loginPointcut()")
+public void afterThrowing(JoinPoint joinPoint){
+    System.out.println("异常通知："+joinPoint.getSignature().getName());
+}
+```
 
 ### [示例](./spring-framework-demo/AOP-aspectj),静态编织的体现
 切入点方法源码与字节码比较
@@ -372,4 +408,5 @@ public class AdminAOP{
 
 ### 依赖包
 
-### 表达式
+
+## JDK动态代理、CGLIB动态代理、AspectJ 与 Spring AOP 之间的关系
