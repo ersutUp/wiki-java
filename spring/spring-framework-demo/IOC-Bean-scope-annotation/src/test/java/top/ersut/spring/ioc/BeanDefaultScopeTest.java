@@ -3,10 +3,7 @@ package top.ersut.spring.ioc;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
-import org.springframework.context.support.GenericXmlApplicationContext;
 import top.ersut.spring.config.ProjectConf;
-
-import javax.annotation.PostConstruct;
 
 class BeanDefaultScopeTest {
 

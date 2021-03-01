@@ -4,9 +4,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import top.ersut.spring.config.ProjectConfig;
-import top.ersut.spring.ioc.dao.UserDao;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 class UserServerTest {
 
