@@ -6,7 +6,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import top.ersut.spring.config.SpringConf;
-import top.ersut.spring.jdbc.service.impl.BookServiceiImpl;
 
 
 class BookServiceTest {

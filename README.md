@@ -16,3 +16,4 @@
 	- [aspectj](./spring/AOP.md#aspectj)
 	- [Spring AOP示例](./spring/AOP.md#spring-aop示例)
 	- [JDK动态代理、CGLIB动态代理、AspectJ 与 Spring AOP 之间的关系](./spring/AOP.md#jdk动态代理cglib动态代理aspectj-与-spring-aop-之间的关系)
+- [jdbcTemplate的使用](./spring/jdbcTemplate.md)
