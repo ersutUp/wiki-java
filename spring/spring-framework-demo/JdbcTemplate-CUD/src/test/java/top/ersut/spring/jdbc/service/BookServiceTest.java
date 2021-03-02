@@ -7,7 +7,6 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import top.ersut.spring.config.SpringConf;
 
-
 class BookServiceTest {
 
     BookService bookService;
@@ -25,14 +24,26 @@ class BookServiceTest {
     }
 
     @Test
+    void saveBackId() {
+        Long id = bookService.saveBackId("小狗钱钱","35.00");
+        System.out.println("id:["+id+"]");
+        Assertions.assertNotNull(id);
+    }
+
+    @Test
     void change() {
-        int row = bookService.change(1L,"意志力","40.00");
+        Long id = bookService.saveBackId("小狗钱钱","35.00");
+        Assertions.assertNotNull(id);
+        int row = bookService.change(id,"小狗钱钱2","50.00");
         Assertions.assertEquals(row,1);
     }
 
     @Test
     void remove() {
-        int row = bookService.remove(1L);
+        Long id = bookService.saveBackId("投资中最简单的事","55.00");
+        Assertions.assertNotNull(id);
+        int row = bookService.remove(id);
         Assertions.assertEquals(row,1);
     }
+
 }

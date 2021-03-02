@@ -21,6 +21,14 @@ public class BookServiceiImpl implements BookService {
     }
 
     @Override
+    public Long saveBackId(String name, String price) {
+        Book book = new Book();
+        book.setbName(name);
+        book.setPrice(price);
+        return bookDao.insertBackId(book);
+    }
+
+    @Override
     public int change(Long id,String name,String price) {
         Book book = new Book();
         book.setId(id);

@@ -102,4 +102,58 @@ public JdbcTemplate jdbcTemplate(@Qualifier("druidDataSource")DataSource dataSou
 
 ## 使用JdbcTemplate进行增删改
 
+## 添加
+
+```
+public int insert(Book book) {
+    //? 是占位符
+    String sql = "insert into book(b_name,price) values(?,?)";
+    return jdbcTemplate.update(sql, book.getbName(), book.getPrice());
+}
+```
+
+## 添加后返回id
+
+```
+public Long insertBackId(Book book) {
+    String sql = "insert into book(b_name,price) values(?,?)";
+
+    PreparedStatementCreator preparedStatementCreator = con -> {
+        //Statement.RETURN_GENERATED_KEYS 标识返回 id
+        PreparedStatement preparedStatement = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+        //设置占位符对应的值
+        preparedStatement.setString(1,book.getbName());
+        preparedStatement.setString(2,book.getPrice());
+        return preparedStatement;
+    };
+
+    KeyHolder keyHolder = new GeneratedKeyHolder();
+    int row = jdbcTemplate.update(preparedStatementCreator,keyHolder);
+    if (row > 0) {
+        //返回的id
+        return keyHolder.getKey().longValue();
+    } else {
+        return null;
+    }
+}
+```
+
+## 修改
+
+```
+public int update(Book book) {
+    String sql = "update book set b_name=?,price=? where id=?";
+    return jdbcTemplate.update(sql, book.getbName(), book.getPrice(),book.getId());
+}
+```
+
+## 删除
+
+```
+public int delete(Long id) {
+    String sql = "delete from book where id=?";
+    return jdbcTemplate.update(sql, id);
+}
+```
+
 ### [示例项目](./spring-framework-demo/JdbcTemplate-CUD)

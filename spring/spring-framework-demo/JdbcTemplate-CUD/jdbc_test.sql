@@ -1,0 +1,9 @@
+SET NAMES utf8
+CREATE DATABASE `jdbc_test` DEFAULT CHARACTER SET utf8mb4;
+
+CREATE TABLE `book` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `b_name` varchar(100) DEFAULT NULL,
+  `price` varchar(10) DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4;
