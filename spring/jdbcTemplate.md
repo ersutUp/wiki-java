@@ -102,7 +102,7 @@ public JdbcTemplate jdbcTemplate(@Qualifier("druidDataSource")DataSource dataSou
 
 ## 使用JdbcTemplate进行增删改
 
-## 添加
+### 添加
 
 ```
 public int insert(Book book) {
@@ -112,7 +112,7 @@ public int insert(Book book) {
 }
 ```
 
-## 添加后返回id
+### 添加后返回id
 
 ```
 public Long insertBackId(Book book) {
@@ -138,7 +138,7 @@ public Long insertBackId(Book book) {
 }
 ```
 
-## 修改
+### 修改
 
 ```
 public int update(Book book) {
@@ -147,7 +147,7 @@ public int update(Book book) {
 }
 ```
 
-## 删除
+### 删除
 
 ```
 public int delete(Long id) {
@@ -157,3 +157,76 @@ public int delete(Long id) {
 ```
 
 ### [示例项目](./spring-framework-demo/JdbcTemplate-CUD)
+
+## 查询
+
+### 查询返回值
+
+```
+public Integer selectCount() {
+    //统计行数
+    String sql = "select count(1) from book";
+    //查询返回值
+    return jdbcTemplate.queryForObject(sql,Integer.class);
+}
+```
+
+### 查询返回对象
+
+```
+public Book selectById(Long id) {
+    //根据id查询 sql
+    String sql = "select * from book where id = ?";
+    //查询返回对象
+    return jdbcTemplate.queryForObject(sql,new BeanPropertyRowMapper<Book>(Book.class),id);
+}
+```
+
+### 查询返回Map
+
+```
+public Map<String, Object> selectByIdToMap(Long id) {
+    //根据id查询 sql
+    String sql = "select * from book where id = ?";
+    //查询返回 Map
+    return jdbcTemplate.queryForObject(sql,new ColumnMapRowMapper(),id);
+}
+```
+
+### 查询返回对象集合
+
+通过JdbcTemplate#query方法返回对象集合
+
+```
+public List<Book> selectAll() {
+    String sql = "select * from book";
+    //查询返回对象集合
+    return jdbcTemplate.query(sql,new BeanPropertyRowMapper<Book>(Book.class));
+}
+```
+
+### RowMapper 接口
+
+RowMapper是对查询结果中每行数据映射到对象中的接口，可通过此接口实现自己的对数据的处理。上边的示例 查询返回Map中 和 查询返回对象中 唯一不同的一处就是 queryForObject的第二个参数；queryForObject的第二个形参就是RowMapper接口。
+
+RowMapper类图：
+
+![](./images/RowMapper.PNG)
+
+- ColumnMapRowMapper：将数据处理成Map，其中key值为列名，value值为列对应的数据。
+- BeanPropertyRowMapper：将数据处理成对象依赖 setter 方法以及无参构造，列名与属性名一一对应，支持下划线自动转驼峰。
+- DataClassRowMapper：将数据处理成对象,由于是BeanPropertyRowMapper的子类所以可以通过setter方法赋值,其扩展了通过全属性构造方法赋值。示例：
+```
+public BookConstructor selectByIdToConstructor(Long id) {
+    //根据id查询 sql
+    String sql = "select * from book where id = ?";
+
+    //查询返回对象（DataClassRowMapper通过构造赋值）
+    BookConstructor bookPublic = jdbcTemplate.queryForObject(sql,new DataClassRowMapper<BookConstructor>(BookConstructor.class),id);
+
+    //DataClassRowMapper依旧支持通过 setter 方法设值
+    Book book = jdbcTemplate.queryForObject(sql,new DataClassRowMapper<Book>(Book.class),id);
+
+    return bookPublic;
+}
+```
