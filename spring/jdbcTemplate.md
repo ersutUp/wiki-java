@@ -230,3 +230,35 @@ public BookConstructor selectByIdToConstructor(Long id) {
     return bookPublic;
 }
 ```
+
+## 批量操作(增删改)
+
+### 批量增加
+
+```
+public int[] batchInsert(List<Object[]> list) {
+    String sql = "insert into book(b_name,price) values(?,?)";
+    //批量添加 参数2 使用list 其中每个object数组为一条数，据根据数组索引顺序来替换占位符
+    return jdbcTemplate.batchUpdate(sql,list);
+}
+```
+
+### 批量更新
+
+```
+public int[] batchUpdate(List<Object[]> list) {
+    String sql = "update book set b_name = ?,price = ? where id = ?";
+    //批量添加 参数2 使用list 其中每个object数组为一条数，据根据数组索引顺序来替换占位符
+    return jdbcTemplate.batchUpdate(sql,list);
+}
+```
+
+### 批量删除
+
+```
+public int[] batchDelete(List<Object[]> list) {
+    String sql = "delete from book where id = ?";
+    //批量添加 参数2 使用list 其中每个object数组为一条数，据根据数组索引顺序来替换占位符
+    return jdbcTemplate.batchUpdate(sql,list);
+}
+```

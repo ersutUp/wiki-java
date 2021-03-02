@@ -34,6 +34,7 @@
 		<module>AOP-annotation</module>
 		<module>JdbcTemplate-CUD</module>
 		<module>JdbcTemplate-query</module>
+		<module>JdbcTemplate-batch</module>
 	</modules>
 
 	<build>
