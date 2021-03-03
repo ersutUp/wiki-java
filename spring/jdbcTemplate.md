@@ -262,3 +262,5 @@ public int[] batchDelete(List<Object[]> list) {
     return jdbcTemplate.batchUpdate(sql,list);
 }
 ```
+
+### [示例项目](./spring-framework-demo/JdbcTemplate-batch)
