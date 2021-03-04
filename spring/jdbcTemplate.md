@@ -18,12 +18,6 @@ JdbcTemplate 是spring对jdbc的封装，简化了jdbc的繁琐操作。
     <artifactId>spring-jdbc</artifactId>
     <version>${spring.version}</version>
 </dependency>
-<!-- 事务 -->
-<dependency>
-    <groupId>org.springframework</groupId>
-    <artifactId>spring-tx</artifactId>
-    <version>${spring.version}</version>
-</dependency>
 
 <!-- mysql -->
 <dependency>

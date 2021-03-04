@@ -35,6 +35,7 @@
 		<module>JdbcTemplate-CUD</module>
 		<module>JdbcTemplate-query</module>
 		<module>JdbcTemplate-batch</module>
+		<module>transaction-program</module>
 	</modules>
 
 	<build>

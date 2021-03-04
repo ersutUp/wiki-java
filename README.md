@@ -17,3 +17,6 @@
 	- [Spring AOP示例](./spring/AOP.md#spring-aop示例)
 	- [JDK动态代理、CGLIB动态代理、AspectJ 与 Spring AOP 之间的关系](./spring/AOP.md#jdk动态代理cglib动态代理aspectj-与-spring-aop-之间的关系)
 - [jdbcTemplate的使用](./spring/jdbcTemplate.md)
+- [事务](./spring/transaction.md)
+	- [事务的四个特性](./spring/transaction.md#characteristic)
+	- [编程式事务](./spring/transaction.md#program)
