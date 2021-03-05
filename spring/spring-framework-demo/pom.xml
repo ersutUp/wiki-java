@@ -36,6 +36,7 @@
 		<module>JdbcTemplate-query</module>
 		<module>JdbcTemplate-batch</module>
 		<module>transaction-program</module>
+		<module>transaction-statement</module>
 	</modules>
 
 	<build>

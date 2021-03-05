@@ -62,11 +62,31 @@
 </dependency>
 ```
 
-### TransactionDefinition
+### <div id="PlatformTransactionManager"></div>PlatformTransactionManager接口类（命令式事务管理器中心接口类）
 
-### PlatformTransactionManager
+类图：
 
-### 事务配置
+![](./images/PlatformTransactionManager.png)
+
+#### TransactionDefinition类
+
+用来定义事务的一些属性的接口，例如事务的传播行为、隔离性、超时时间、等等
+
+#### TransactionStatus 类
+
+存储事务状态的接口
+
+#### 命令式事务管理器实现类
+
+- DataSourceTransactionManager：jdbc的事务管理器
+- JtaTransactionManager：分布式事务管理器
+- HibernateTransactionManager:Hibernate事务管理器
+- JpaTransactionManager:jpa事务管理器
+
+多说一句**mybatis是自己处理的事务**没有实现PlatformTransactionManager接口
+
+
+### 配置jdbc事务管理器
 
 ```
 @Bean
@@ -226,7 +246,97 @@ id|user_name|money
 
 由于添加了事务，遇到异常后回滚了数据，所有张三扣除的200元并没有提交到数据库，不影响数据库中的数据。
 
-## 声明式事务
+## <div id="statement"></div>声明式事务
+
+### [示例项目](./spring-framework-demo/transaction-statement)
+
+### 开启注解式事务
+
+在配置类上添加 `@EnableTransactionManagement` 注解
+
+示例：
+
+```
+@Configuration
+//开启注解式事务
+@EnableTransactionManagement
+public class SpringConf {
+}
+```
+
+### 使用
+
+在方法上添加 `@Transactional` 注解开启事务
+
+示例：
+
+```
+@Transactional
+public boolean transferAccountsTransaction(Long formId, Long toId, Long money) throws Exception {
+
+    // form 账户减掉 money
+    AccountChangeDTO accountChangeFrom = new AccountChangeDTO();
+    accountChangeFrom.setId(formId);
+    accountChangeFrom.setChangemoney(-money);
+    int row = accountDao.moneyChange(accountChangeFrom);
+    if(row <= 0){
+        throw new Exception("转账来源错误");
+    }
+
+    /** 制造异常 */
+    int num = 1/0;
+
+    // to 账户增加 money
+    AccountChangeDTO accountChangeTo = new AccountChangeDTO();
+    accountChangeFrom.setId(formId);
+    accountChangeFrom.setChangemoney(money);
+    row = accountDao.moneyChange(accountChangeTo);
+    if(row <= 0){
+        throw new Exception("转账接收方错误");
+    }
+        
+    return true;
+
+}
+```
+
+### 原理
+
+声明式事务通过aop进行切面开启事务、回滚事务、提交事务，部分核心代码：
+
+```
+
+public abstract class TransactionAspectSupport implements BeanFactoryAware, InitializingBean {
+	protected Object invokeWithinTransaction(Method method, @Nullable Class<?> targetClass,
+			final InvocationCallback invocation) throws Throwable {
+
+		...
+
+		TransactionInfo txInfo = createTransactionIfNecessary(ptm, txAttr, joinpointIdentification);
+
+		Object retVal;
+		try {
+			//执行代理方法
+			retVal = invocation.proceedWithInvocation();
+		} catch (Throwable ex) {
+			// 回滚
+			completeTransactionAfterThrowing(txInfo, ex);
+			throw ex;
+		}
+
+		...
+
+		//提交
+		commitTransactionAfterReturning(txInfo);
+		return retVal;
+
+		...
+
+	}
+}
+```
+
+所以声明式事务遇到异常会自动回滚
 
 ## 事务的传播行为
 

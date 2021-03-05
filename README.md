@@ -20,3 +20,5 @@
 - [事务](./spring/transaction.md)
 	- [事务的四个特性](./spring/transaction.md#characteristic)
 	- [编程式事务](./spring/transaction.md#program)
+		- [命令式事务管理器中心接口类](./spring/transaction.md#PlatformTransactionManager)
+	- [声明式事务](./spring/transaction.md#statement)
