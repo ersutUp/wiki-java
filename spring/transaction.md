@@ -342,7 +342,7 @@ public abstract class TransactionAspectSupport implements BeanFactoryAware, Init
 
 
 
-## 事务的传播行为
+## <div id="propagation"></div>事务的传播行为
 
 ### 什么是传播行为
 
@@ -382,8 +382,8 @@ propagation属性指定传播方式其类型为Propagation(枚举类)，默认�
 #### REQUIRES_NEW 与 NESTED 的不同
 
 
-- notansactionPropagationByNested测试用例 与 notansactionAndPropagationByRequiresNew测试用例 结果一致，因为开启了新事务
-- tansactionNestedAndRequiredNewDifferentByRequiresNew测试用例 与 tansactionNestedAndRequiredNewDifferentByNested测试用例 结果一致，因为他们是在子方法抛出的异常
+- notansactionPropagationByNested测试用例 与 notansactionAndPropagationByRequiresNew测试用例 结果一致
+- tansactionNestedAndRequiredNewDifferentByRequiresNew测试用例 与 tansactionNestedAndRequiredNewDifferentByNested测试用例 结果一致
 - tansactionPropagationByNested测试用例 与 tansactionAndPropagationByRequiresNew测试用例 结果不一致，因为是在父方法抛出异常
 - 总结：
 	- RequiresNew的两个事务并不相关
