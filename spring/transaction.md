@@ -16,7 +16,7 @@
   我们不能因为李四账户增加500失败而张三账户减少500，所已两个步骤要一起撤回（这个撤回操作事务中成为回滚）
 
 
-## <div id="characteristic"></div>事务的四个特性
+## <div id="characteristic"></div>事务的四个特性（ACID）
 
 ### 原子性
 
@@ -83,13 +83,13 @@
 - HibernateTransactionManager:Hibernate事务管理器
 - JpaTransactionManager:jpa事务管理器
 
-多说一句**mybatis是自己处理的事务**没有实现PlatformTransactionManager接口
+多说一句**mybatis是自己处理的事务**没有实现PlatformTransactionManager接口（**有疑问，表述不太正确**）
 
 
 ### 配置jdbc事务管理器
 
 ```
-@Bean
+@Bean 
 public DataSourceTransactionManager transactionManager(@Qualifier("druidDataSource") DataSource dataSource){
     DataSourceTransactionManager dataSourceTransactionManager = new DataSourceTransactionManager();
     dataSourceTransactionManager.setDataSource(dataSource);
@@ -246,7 +246,7 @@ id|user_name|money
 
 由于添加了事务，遇到异常后回滚了数据，所有张三扣除的200元并没有提交到数据库，不影响数据库中的数据。
 
-## <div id="statement"></div>声明式事务
+## <div id="statement"></div>声明式事务（注解方式）
 
 ### [示例项目](./spring-framework-demo/transaction-statement)
 
@@ -338,6 +338,53 @@ public abstract class TransactionAspectSupport implements BeanFactoryAware, Init
 
 所以声明式事务遇到异常会自动回滚
 
+## <div id="Isolation"></div>事务的隔离性
+
+
+
 ## 事务的传播行为
 
-## <div id="Isolation"></div>事务的隔离性
+### 什么是传播行为
+
+管理多个事务之间调用的过程
+
+### 事务的7个传播行为
+
+#### 描述
+|传播属性|描述|
+|:----|:----|
+|REQUIRED|如果有事务在运行，当前的方法就在这个事务内运行，否则，就启动一个新的事务，并在自己的事务内运行|
+|MANDATORY|当前的方法必须运行在事务内部，如果没有正在运行的事务，就抛出异常|
+|REQUIRES_NEW|当前的方法必须启动新事务，并在它自己的事务内运行，如果有事务正在运行，应该将它挂起|
+|SUPPORTS|如果有事务在运行，当前的方法就在这个事务内运行，否则它可以不运行在事务中|
+|NOT_SUPPORTED|当前的方法不应该运行在事务中，如果有运行的事务，将它挂起|
+|NEVER|当前的方法不应该运行在事务中，如果有运行的事务，就抛出异常|
+|NESTED|如果有事务在运行，当前的方法就应该在这个事务的嵌套事务内运行，否则，就启动一个新的事务，并在它自己的事务内运行|
+
+
+#### 使用表格比较不同
+
+|\|REQUIRED（确保自己有事务）|MANDATORY(调用方必须有事务)|REQUIRES_NEW(必须使用新事务)|SUPPORTS（可以不使用事务）|NOT_SUPPORTED(强制不使用事务)|NEVER(不允许在事务中运行)|NESTED（嵌套事务）|
+|:----|:----|:----|:----|:----|:----|:----|
+|A方法有事务|B方法使用A方法的事务|B方法使用A方法的事务|A方法的事务挂起,B方法开启新事务|B方法使用A方法的事务|A方法的事务挂起|抛出异常|B方法在A方法事务的嵌套事务中运行|
+|A方法无事务|B方法开启新事务|抛出异常|B方法开启新事务|B方法不使用事务|B方法不使用事务|B方法不使用事务|B方法开启新事务|
+
+#### 在 `@Transactional` 中指定传播方式
+
+propagation属性指定传播方式其类型为Propagation(枚举类)，默认值为 REQUIRED ，示例(指定为REQUIRES_NEW)：
+
+```
+@Transactional(propagation = Propagation.REQUIRES_NEW)
+```
+
+### [示例项目](./spring-framework-demo/transaction-propagation)
+
+#### REQUIRES_NEW 与 NESTED 的不同
+
+
+- notansactionPropagationByNested测试用例 与 notansactionAndPropagationByRequiresNew测试用例 结果一致，因为开启了新事务
+- tansactionNestedAndRequiredNewDifferentByRequiresNew测试用例 与 tansactionNestedAndRequiredNewDifferentByNested测试用例 结果一致，因为他们是在子方法抛出的异常
+- tansactionPropagationByNested测试用例 与 tansactionAndPropagationByRequiresNew测试用例 结果不一致，因为是在父方法抛出异常
+- 总结：
+	- RequiresNew的两个事务并不相关
+	- Nested的事务是嵌套的，主事务回滚嵌套的事务也回滚，嵌套事务回滚主事务不会滚
