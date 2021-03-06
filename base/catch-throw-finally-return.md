@@ -4,24 +4,24 @@
 
 ```
 public int m1() throws Exception {
-	int i = 0;
-	try{
-		i = 1/0;
+    int i = 0;
+    try{
+        i = 1/0;
     }catch (Exception e){
-		throw new Exception(e);
+        throw new Exception(e);
     }finally {
-		return i;
+        return i;
     }
 
 }
 
 public void m2() {
 
-	try{
-		m1();
+    try{
+        m1();
     }catch (Exception e){
-		//这里不执行
-		e.printStackTrace();
+        //这里不执行
+        e.printStackTrace();
     }
 
 }
