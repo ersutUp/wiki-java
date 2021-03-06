@@ -4,7 +4,7 @@
 
 ```
 public int m1() throws Exception {
-	int i;
+	int i = 0;
 	try{
 		i = 1/0;
     }catch (Exception e){
