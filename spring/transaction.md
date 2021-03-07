@@ -364,8 +364,8 @@ public abstract class TransactionAspectSupport implements BeanFactoryAware, Init
 
 #### 使用表格比较不同
 
-|\|REQUIRED（确保自己有事务）|MANDATORY(调用方必须有事务)|REQUIRES_NEW(必须使用新事务)|SUPPORTS（可以不使用事务）|NOT_SUPPORTED(强制不使用事务)|NEVER(不允许在事务中运行)|NESTED（嵌套事务）|
-|:----|:----|:----|:----|:----|:----|:----|
+|空|REQUIRED（确保自己有事务）|MANDATORY(调用方必须有事务)|REQUIRES_NEW(必须使用新事务)|SUPPORTS（可以不使用事务）|NOT_SUPPORTED(强制不使用事务)|NEVER(不允许在事务中运行)|NESTED（嵌套事务）|
+|:----|:----|:----|:----|:----|:----|:----|:----|
 |A方法有事务|B方法使用A方法的事务|B方法使用A方法的事务|A方法的事务挂起,B方法开启新事务|B方法使用A方法的事务|A方法的事务挂起|抛出异常|B方法在A方法事务的嵌套事务中运行|
 |A方法无事务|B方法开启新事务|抛出异常|B方法开启新事务|B方法不使用事务|B方法不使用事务|B方法不使用事务|B方法开启新事务|
 
