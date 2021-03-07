@@ -23,4 +23,5 @@
 	- [编程式事务](./spring/transaction.md#program)
 		- [命令式事务管理器中心接口类](./spring/transaction.md#PlatformTransactionManager)
 	- [声明式事务](./spring/transaction.md#statement)
+	- [事务的隔离性](./spring/transaction.md#Isolation)
 	- [事务的传播行为](./spring/transaction.md#propagation)
