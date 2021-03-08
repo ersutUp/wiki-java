@@ -439,6 +439,8 @@ isolation属性是指定隔离性，其类型为`Isolation`，默认值为`Isola
 
 #### 使用表格比较不同
 
+A方法内调用B方法
+
 |-|REQUIRED（确保自己有事务）|MANDATORY(调用方必须有事务)|REQUIRES_NEW(必须使用新事务)|SUPPORTS（可以不使用事务）|NOT_SUPPORTED(强制不使用事务)|NEVER(不允许在事务中运行)|NESTED（嵌套事务）|
 |:----|:----|:----|:----|:----|:----|:----|:----|
 |A方法有事务|B方法使用A方法的事务|B方法使用A方法的事务|A方法的事务挂起,B方法开启新事务|B方法使用A方法的事务|A方法的事务挂起|抛出异常|B方法在A方法事务的嵌套事务中运行|
@@ -463,3 +465,36 @@ propagation属性指定传播方式其类型为Propagation(枚举类)，默认�
 - 总结：
 	- RequiresNew的两个事务并不相关
 	- Nested的事务是嵌套的，主事务回滚嵌套的事务也回滚，嵌套事务回滚主事务不会滚
+
+## 事务的其他属性
+
+### timeout
+
+设置事务的超时时间，默认为 -1 不超时，单位:秒。
+
+`@Transactional`中指定超时时间，示例：
+
+```
+@Transactional(timeout=20)
+```
+
+### rollbackFor
+
+设置事务在什么异常下进行回滚
+
+`@Transactional`中指定异常回滚，示例Exception异常回滚：
+
+```
+@Transactional(rollbackFor = Exception.class)
+```
+
+### noRollbackFor
+
+设置事务在什么异常下不回滚
+
+`@Transactional`中指定异常不回滚，示例RuntimeException异常不回滚：
+
+```
+@Transactional(noRollbackFor = RuntimeException.class)
+```
+

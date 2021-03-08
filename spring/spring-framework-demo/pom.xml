@@ -38,6 +38,7 @@
 		<module>transaction-program</module>
 		<module>transaction-statement</module>
 		<module>transaction-propagation</module>
+		<module>newCharacteristic-JUnit5</module>
 	</modules>
 
 	<build>
@@ -78,7 +79,7 @@
 		<dependency>
 			<groupId>org.junit.jupiter</groupId>
 			<artifactId>junit-jupiter</artifactId>
-			<version>RELEASE</version>
+			<version>5.8.0-M1</version>
 			<scope>test</scope>
 		</dependency>
 	</dependencies>

@@ -8,6 +8,8 @@
 - [spring-boot启动过程（源码分析）](./spring-boot/spring-boot启动过程（源码分析）.md)
 
 # spring5
+- [新特性](./spring/spring5-new-characteristic.md)
+	- [JUnit5的整合](./spring/spring5-new-characteristic.md#JUnit5)
 - [创建一个spring5项目](./spring/创建一个spring5项目.md)
 - [IOC控制反转](./spring/IOC.md)
 - [AOP面向切面编程](./spring/AOP.md)
