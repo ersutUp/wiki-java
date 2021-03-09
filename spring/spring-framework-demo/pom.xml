@@ -39,6 +39,7 @@
 		<module>transaction-statement</module>
 		<module>transaction-propagation</module>
 		<module>newCharacteristic-JUnit5</module>
+		<module>webFlux-reactive-programming</module>
 	</modules>
 
 	<build>

@@ -2,6 +2,8 @@
 
 ----------
 
+## spring5基于JDK1.8开发，兼容JDK1.9
+
 ## <div id="JUnit5"></div>JUnit5的整合
 
 ### 依赖包
