@@ -138,3 +138,31 @@ Mono.just("list").subscribe(System.out::println);
 ```
 
 ### [项目示例](./spring-framework-demo/webFlux-reactive-programming)
+
+## <div id="webFulx-annotation"></div>spring WebFlux 注解式编程模型
+
+### 依赖
+
+```
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-webflux</artifactId>
+</dependency>
+```
+
+注意：需要springboot2.0以上版本，因为2.0以上版本基于spring5开发
+
+### [示例项目](./spring-framework-demo/webFlux-annotation)
+
+### 使用springMVC实现相同功能：[示例项目](./spring-framework-demo/MVC-annotation)
+
+
+## <div id="webFulx-func"></div>spring WebFlux 函数式编程模型
+
+需要 lambda 、 函数式编程、spring Reactor 的基础，待学完再回来更新。
+
+## <div id="webFulx-client"></div>webClient
+
+需要 spring Reactor 基础，待学完再回来更新。
+
+### [示例](./spring-framework-demo/webFlux-annotation/src/test/java/top/ersut/webflux/controller/UserControllerTest.java)

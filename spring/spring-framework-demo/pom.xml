@@ -10,7 +10,8 @@
 
     <properties>
         <jdk.version>1.8</jdk.version>
-        <spring.version>5.3.4</spring.version>
+		<spring.version>5.3.4</spring.version>
+		<spring.boot.version>2.4.3</spring.boot.version>
     </properties>
 
 	<modules>
@@ -40,7 +41,29 @@
 		<module>transaction-propagation</module>
 		<module>newCharacteristic-JUnit5</module>
 		<module>webFlux-reactive-programming</module>
+		<module>webFlux-annotation</module>
+		<module>MVC-annotation</module>
 	</modules>
+
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-starter-webflux</artifactId>
+				<version>${spring.boot.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-starter-web</artifactId>
+				<version>${spring.boot.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-starter-test</artifactId>
+				<version>${spring.boot.version}</version>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
 
 	<build>
 		<plugins>
