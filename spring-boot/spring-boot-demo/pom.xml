@@ -21,6 +21,8 @@
     <modules>
         <module>hello-world</module>
         <module>anno-conf</module>
+        <module>conditional-demo</module>
+        <module>anno-Import</module>
     </modules>
 
     <dependencies>
