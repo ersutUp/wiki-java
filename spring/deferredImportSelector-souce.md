@@ -12,7 +12,7 @@
 
 ### 先看源码
 
-```
+```java
 public interface DeferredImportSelector extends ImportSelector {
 
 	/**
@@ -88,7 +88,7 @@ public interface DeferredImportSelector extends ImportSelector {
 
 org.springframework.context.annotation.ConfigurationClassParser#parse:
 
-```
+```java
 //DeferredImportSelector处理器
 private final DeferredImportSelectorHandler deferredImportSelectorHandler = new DeferredImportSelectorHandler();
 public void parse(Set<BeanDefinitionHolder> configCandidates) {
@@ -107,7 +107,7 @@ public void parse(Set<BeanDefinitionHolder> configCandidates) {
 	
 	1. org.springframework.context.annotation.ConfigurationClassParser#processConfigurationClass：
 	
-	```
+	```java
 	protected void processConfigurationClass(ConfigurationClass configClass, Predicate<String> filter) throws IOException {
 	
 		...
@@ -124,7 +124,7 @@ public void parse(Set<BeanDefinitionHolder> configCandidates) {
 	
 	2. org.springframework.context.annotation.ConfigurationClassParser#doProcessConfigurationClass
 	
-	```
+	```java
 	protected final SourceClass doProcessConfigurationClass(
 			ConfigurationClass configClass, SourceClass sourceClass, Predicate<String> filter)
 			throws IOException {
@@ -142,7 +142,7 @@ public void parse(Set<BeanDefinitionHolder> configCandidates) {
 	
 	3. org.springframework.context.annotation.ConfigurationClassParser#processImports：生命周期第一步：实例化 DeferredImportSelector 的实现类
 	
-	```
+	```java
 	private void processImports(ConfigurationClass configClass, SourceClass currentSourceClass,
 			Collection<SourceClass> importCandidates, Predicate<String> exclusionFilter,
 			boolean checkForCircularImports) {
@@ -175,7 +175,7 @@ public void parse(Set<BeanDefinitionHolder> configCandidates) {
 	
 	4. org.springframework.context.annotation.ConfigurationClassParser.DeferredImportSelectorHandler#handle: 创建 DeferredImportSelector 持有器
 	
-	```
+	```java
 	//DeferredImportSelector 持有器
 	private List<DeferredImportSelectorHolder> deferredImportSelectors = new ArrayList<>();
 	public void handle(ConfigurationClass configClass, DeferredImportSelector importSelector) {
@@ -194,7 +194,7 @@ public void parse(Set<BeanDefinitionHolder> configCandidates) {
 - `this.deferredImportSelectorHandler.process();`部分：
 	
 	org.springframework.context.annotation.ConfigurationClassParser.DeferredImportSelectorHandler#process：注册 DeferredImportSelector.Group 处理器(`DeferredImportSelectorGroupingHandler`)并处理`Group`对象
-	```
+	```java
 	//DeferredImportSelector 持有器
 	private List<DeferredImportSelectorHolder> deferredImportSelectors = new ArrayList<>();
 	public void process() {
@@ -219,7 +219,7 @@ public void parse(Set<BeanDefinitionHolder> configCandidates) {
 	- `handler::register` 部分	
 		1. org.springframework.context.annotation.ConfigurationClassParser.DeferredImportSelectorGroupingHandler#register:通过`DeferredImportSelector#getImportGroup`方法获取Group对象并进行实例化。（生命周期的第二步与第三部）
 
-		```
+		```java
 		public void register(DeferredImportSelectorHolder deferredImport) {
 			//生命周期第二步：通过 DeferredImportSelector#getImportGroup 方法获取具体 Group 实现类
 			Class<? extends Group> group = deferredImport.getImportSelector().getImportGroup();
@@ -236,7 +236,7 @@ public void parse(Set<BeanDefinitionHolder> configCandidates) {
 	-  `handler.processGroupImports()`部分
 		
 		1.  org.springframework.context.annotation.ConfigurationClassParser.DeferredImportSelectorGroupingHandler#processGroupImports：处理`Group`对象
-			```
+			```java
 			public void processGroupImports() {
 				for (DeferredImportSelectorGrouping grouping : this.groupings.values()) {
 					Predicate<String> exclusionFilter = grouping.getCandidateFilter();
@@ -259,7 +259,7 @@ public void parse(Set<BeanDefinitionHolder> configCandidates) {
 
 			- `grouping.getImports()`部分：
 				1. org.springframework.context.annotation.ConfigurationClassParser.DeferredImportSelectorGrouping#getImports：调用多个`Group#process`方法（多个`DeferredImportSelector`使用同一个`Group`），再调用`Group#selectImports`方法获取`Iterable<Entry>`（生命周期的第四部与第五步）
-				```
+				```java
 				public Iterable<Group.Entry> getImports() {
 					for (DeferredImportSelectorHolder deferredImport : this.deferredImports) {
 						//生命周期第四步 调用Group#process方法
