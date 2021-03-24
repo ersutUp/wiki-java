@@ -116,11 +116,27 @@ public interface Condition {
 
 Condition类是一个接口,其`matches`方法返回true则注册bean,否则不注册
 
-[测试用例(在生产环境时bean才进行注册)](./spring-boot-demo/conditional-demo/src/test/java/top/ersut/boot/conditional/ConditionalDemoTest.java)
+**示例**
+
+[Condition类的一个实现：在生产环境时bean才进行注册](./spring-boot-demo/conditional-demo/src/main/java/top/ersut/boot/conditional/condition/impl/ConditionalByProd.java),代码：
+
+```
+public class ConditionalByProd implements Condition {
+
+    static final String PROD = "prod";
+
+    @Override
+    public boolean matches(ConditionContext context, AnnotatedTypeMetadata metadata) {
+        return Arrays.asList(context.getEnvironment().getActiveProfiles()).contains(PROD);
+    }
+}
+```
+
+[对应的测试用例](./spring-boot-demo/conditional-demo/src/test/java/top/ersut/boot/conditional/ConditionalDemoTest.java)
 
 
 
-**Spring Boot 中为 Conditional 衍生了很多子类**，如下图
+**Spring Boot 中为 Conditional 衍生了很多子类，如下图**
 
 ![](./images/conditional-all.png)
 
