@@ -1,6 +1,7 @@
 # java基础
 - [类加载过程代码篇](./base/类加载过程代码篇.md)
 - [查看内存中的字节码文件](./base/memory-class.md)
+- [关于this关键字](./base/this.md)
 - [（未查找原因）catch中抛出异常的同时finally中执行return,为什么抛出的这个异常无法捕获?](./base/catch-throw-finally-return.md)
 - Lambda表达式与函数式编程
 
