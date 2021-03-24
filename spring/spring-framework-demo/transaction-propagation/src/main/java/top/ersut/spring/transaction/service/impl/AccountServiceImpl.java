@@ -65,7 +65,13 @@ public class AccountServiceImpl implements AccountService {
         accountDTO.setLisi(lisi);
         //不同事务传播方式创建李四账户
         if (Objects.equals(propagation,Propagation.REQUIRED)){
-            //注意:这里一定要用注入的 accountService 才能将事务生效。 由于声明式事务使用 AOP 实现，如果使用 this 那调用的非AOP代理类，注入的 accountService 才是AOP代理类
+            /*
+            注意:这里一定要用注入的 accountService 才能将事务生效。
+            由于当前声明式事务使用 AOP（jdk动态代理） 实现，如果使用 this 那调用的非AOP代理类，注入的 accountService 才是AOP代理类。
+            当然如果是 CGLIB动态代理 实现,则不存在这个问题。
+            可以在@EnableTransactionManagement 注解的 mode 属性上指定动态代理模式
+            注意：CGLIB模式，需使用 -javaagent: 指定 aspectjweaver.jar 文件
+             */
             accountService.propagationByRequiredError(lisi);
         } else if (Objects.equals(propagation,Propagation.MANDATORY)){
             accountService.propagationByMandatoryError(lisi);

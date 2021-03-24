@@ -32,6 +32,7 @@
 # spring boot
 - [Spring Boot 介绍](./spring-boot/spring-boot.md)
 - [boot 之 hello world](./spring-boot/boot-hello-world.md)
+- [Spring Boot 的注解](./spring-boot/boot-annotation.md)
 - [spring-boot启动过程（简单分析）](./spring-boot/spring-boot启动过程（简单分析）.md)
 - [spring-boot启动过程（源码分析）](./spring-boot/spring-boot启动过程（源码分析）.md)
 
