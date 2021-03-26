@@ -1,0 +1,2 @@
+org.springframework.context.ApplicationContextInitializer = \
+top.ersut.boot.filter.MyTypeExcludeFilterApplicationContextInitializer
