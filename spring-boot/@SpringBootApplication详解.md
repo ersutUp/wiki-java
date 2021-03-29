@@ -119,7 +119,7 @@ public interface TypeFilter {
 
 #### `TypeExcludeFilter` 源码解析
 
-**源码：**主要看`#match`和`#getDelegates`方法
+**源码：** 主要看`#match`和`#getDelegates`方法
 
 ```java
 public class TypeExcludeFilter implements TypeFilter, BeanFactoryAware {
