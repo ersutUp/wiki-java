@@ -23,6 +23,7 @@
         <module>anno-conf</module>
         <module>conditional-demo</module>
         <module>anno-Import</module>
+        <module>anno-SpringBootApplication</module>
         <module>anno-ComponentScan-TypeExcludeFilter</module>
     </modules>
 
