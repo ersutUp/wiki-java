@@ -25,6 +25,7 @@
         <module>anno-Import</module>
         <module>anno-SpringBootApplication</module>
         <module>anno-ComponentScan-TypeExcludeFilter</module>
+        <module>anno-ConfigurationProperties-yaml</module>
     </modules>
 
     <dependencies>

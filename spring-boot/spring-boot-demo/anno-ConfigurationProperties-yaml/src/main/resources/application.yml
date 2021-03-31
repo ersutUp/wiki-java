@@ -1,0 +1,27 @@
+people:
+  #双引号内的转义字符会正常执行
+  name: "张\n三"
+  #单引号内的转义字符按字符串处理
+  alias: '小\n三'
+  #与单引号处理方式一致
+  sex: 男\n人
+  age: 18
+  # map 的第一种写法
+  transport:
+    #key值对中文不友好，会自动忽略
+    中文: 5
+    bike: 1
+    car: 3
+  # 数组的第一种写法（List 和 Set 属于数组）
+  books:
+    - 意志力
+    - Thinking in java
+  friends:
+    - name: 李四
+      sex: 男
+      # map 的第二种写法
+      transport: {car: 1}
+      # 数组的第二种方法
+      books: [小狗钱钱,麦肯锡方法]
+    - name: 王五
+      sex: 女

@@ -2,7 +2,7 @@
 
 ----------
 
-## @SpringBootTest
+## <div id="SpringBootTest"></div>@SpringBootTest
 - 功能：测试类添加SpringBoot环境
 - 可用处：测试类
 - 代码示例：
@@ -13,7 +13,7 @@
 	```
 
 
-## @ImportResource
+## <div id="ImportResource"></div>@ImportResource
 
 - 功能：导入xml配置
 - 可用处：一般放在配置类或启动类上
@@ -31,7 +31,7 @@
 	```
 
 
-## @Configuration
+## <div id="Configuration"></div>@Configuration
 
 - 功能：替代之前spring中xml配置文件  
 - 可用处：类
@@ -42,7 +42,7 @@
 	}
 	```
 
-## @Bean
+## <div id="Bean"></div>@Bean
 
 - 功能：创建一个bean，等同于xml中的bean标签
 - 可用处：一般在配置类的方法上
@@ -69,7 +69,7 @@
 
 **[@SpringBootTest、@ImportResource、@Configuration、@Bean 示例项目](./spring-boot-demo/anno-conf)**
 
-## @Conditional
+## <div id="Conditional"></div>@Conditional
 
 - 功能：满足一定条件的情况下注册bean
 - 可用处：类、方法（一般在配置类中使用）
@@ -363,7 +363,7 @@ public class ConditionalOnResourceDemo {
 }
 ```
 
-## @Import
+## <div id="Import"></div>@Import
 
 - 功能：导入一个或多个Bean。支持导入配置类， `ImportSelector` 和 `ImportBeanDefinitionRegistrar` 的实现类，以及常规类。导入bean的名称为类的全路径
 - 属性：
@@ -442,3 +442,88 @@ public class ImportBeanDefinitionRegistrarDemo {
 ```
 
 - [测试用例](./spring-boot-demo/anno-Import/src/test/java/top/ersut/boot/annoimport/demo/ImportBeanDefinitionRegistrarDemoTest.java)
+
+## <div id="ConfigurationProperties"></div>@ConfigurationProperties
+
+- 功能：从配置文件中读取值并赋值给所在类的属性
+
+- 属性：
+
+	- prefix：配置文件中的前缀
+
+- 启用：需使用`@EnableConfigurationProperties`注解来启用`@ConfigurationProperties`注解，`@EnableConfigurationProperties`一般放在启动类或者配置类中
+
+- 注意：`@ConfigurationProperties` 所在类必须是bean，否则不会生效。可以通过`@Bean`或`@Component`将其指定为bean
+
+- [测试用例](./spring-boot-demo/anno-ConfigurationProperties-yaml/src/test/java/top/ersut/boot/yml/PeopleTest.java)
+
+- [示例项目](./spring-boot-demo/anno-ConfigurationProperties-yaml)，部分代码：
+
+	- `@EnableConfigurationProperties`部分：
+
+		```java
+		@SpringBootApplication
+		@EnableConfigurationProperties
+		public class YmlApplication {
+		    public static void main(String[] args) {
+		        SpringApplication.run(YmlApplication.class,args);
+		    }
+		}
+		```
+
+	- `@ConfigurationProperties`部分：
+
+		```java
+		@Component
+		@ConfigurationProperties(prefix = "people")
+		public class People {
+		
+		    private String name;
+		
+		    private String alias;
+		
+		    private String sex;
+		
+		    private Integer age;
+		    /**交通工具*/
+		    private Map<String,Integer> transport;
+		
+		    private List<String> books;
+		
+		    private Set<People> friends;
+		    
+		    ...getter setter...
+		}
+		```
+
+	- 配置文件：
+
+		```yaml
+		people:
+		  #双引号内的转义字符会正常执行
+		  name: "张\n三"
+		  #单引号内的转义字符按字符串处理
+		  alias: '小\n三'
+		  #与单引号处理方式一致
+		  sex: 男\n人
+		  age: 18
+		  # map 的第一种写法
+		  transport:
+		    #key值对中文不友好，会自动忽略
+		    中文: 5
+		    bike: 1
+		    car: 3
+		  # 数组的第一种写法（List 和 Set 属于数组）
+		  books:
+		    - 意志力
+		    - Thinking in java
+		  friends:
+		    - name: 李四
+		      sex: 男
+		      # map 的第二种写法
+		      transport: {car: 1}
+		      # 数组的第二种方法
+		      books: [小狗钱钱,麦肯锡方法]
+		    - name: 王五
+		      sex: 女
+		```
