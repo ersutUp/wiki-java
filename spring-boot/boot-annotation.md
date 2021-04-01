@@ -543,7 +543,7 @@ public class ImportBeanDefinitionRegistrarDemo {
 
 **最终效果：**
 
-![](.\images\configuration-processor.png)
+![](./images/configuration-processor.png)
 
 **注意：**
 
