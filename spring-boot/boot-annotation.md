@@ -445,7 +445,7 @@ public class ImportBeanDefinitionRegistrarDemo {
 
 ## <div id="ConfigurationProperties"></div>@ConfigurationProperties
 
-- 功能：从配置文件中读取值并赋值给所在类的属性
+- 功能：从配置文件中读取值并赋值给所在类（配置绑定类）的属性
 
 - 属性：
 
@@ -527,3 +527,25 @@ public class ImportBeanDefinitionRegistrarDemo {
 		    - name: 王五
 		      sex: 女
 		```
+
+### 配置绑定类在配置文件中的提示
+
+未处理的情况下配置文件中不提示配置绑定类的属性，需要添加Spring Boot 提供的 `spring-boot-configuration-processor`包才会提示。
+
+**meavn依赖：**
+
+```xml
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-configuration-processor</artifactId>
+</dependency>
+```
+
+**最终效果：**
+
+![](.\images\configuration-processor.png)
+
+**注意：**
+
+- 属性需要有setter方法才会有提示
+- 新添加的属性在类编译后才会有提示
