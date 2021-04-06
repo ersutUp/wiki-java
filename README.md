@@ -31,7 +31,7 @@
 	- [事务的传播行为](./spring/transaction.md#propagation)
 - [【源码解析】DeferredImportSelector 使用以及声明周期](./spring/deferredImportSelector-souce.md)
 
-# spring boot
+# spring boot 2
 - [Spring Boot 介绍](./spring-boot/spring-boot.md)
 - [boot 之 hello world](./spring-boot/boot-hello-world.md)
 - [Spring Boot 的注解](./spring-boot/boot-annotation.md)
@@ -43,6 +43,7 @@
 	- [@Import](./spring-boot/boot-annotation.md#Import)
 	- [@ConfigurationProperties](./spring-boot/boot-annotation.md#ConfigurationProperties)
 - [Spring Boot 2 中 yaml 的使用](./spring-boot/yaml使用.md)
+- [静态资源规则与定制化](./spring-boot/静态资源规则与定制化.md)
 - [【源码解析】@SpringBootApplication 详解](./spring-boot/@SpringBootApplication详解.md)
 - [spring-boot启动过程（简单分析）](./spring-boot/spring-boot启动过程（简单分析）.md)
 - [spring-boot启动过程（源码分析）](./spring-boot/spring-boot启动过程（源码分析）.md)

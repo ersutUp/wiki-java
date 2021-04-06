@@ -26,6 +26,8 @@
         <module>anno-SpringBootApplication</module>
         <module>anno-ComponentScan-TypeExcludeFilter</module>
         <module>anno-ConfigurationProperties-yaml</module>
+        <module>static-resources-default</module>
+        <module>static-resources-personalized</module>
     </modules>
 
     <dependencies>
