@@ -634,7 +634,7 @@ public abstract class AutoConfigurationPackages {
 
 **`@Import(AutoConfigurationImportSelector.class)`最终导入了排除后的自动配置类**
 
-##### **考虑一个问题：`spring-boot-autoconfigure-2.4.3.jar`那么多自动配置类我们项目里全都用的到吗？**
+#### **考虑一个问题：`spring-boot-autoconfigure-2.4.3.jar`那么多自动配置类我们项目里全都用的到吗？**
 
 看看`spring-boot-autoconfigure-2.4.3.jar`中的几个自动配置类
 

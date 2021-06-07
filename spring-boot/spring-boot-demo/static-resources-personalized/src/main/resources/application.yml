@@ -5,3 +5,5 @@ spring:
   web:
     resources:
       static-locations: classpath:/res/
+      cache:
+        period: 20
