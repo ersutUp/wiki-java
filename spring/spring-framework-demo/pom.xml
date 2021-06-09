@@ -43,6 +43,7 @@
 		<module>webFlux-reactive-programming</module>
 		<module>webFlux-annotation</module>
 		<module>MVC-annotation</module>
+		<module>enableWebMvc-use</module>
 	</modules>
 
 	<dependencyManagement>

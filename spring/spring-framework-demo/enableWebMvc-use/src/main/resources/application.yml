@@ -1,0 +1,4 @@
+spring:
+  mvc:
+    pathmatch:
+      use-suffix-pattern: true
