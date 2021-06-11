@@ -138,7 +138,7 @@ final class WelcomePageHandlerMapping extends AbstractUrlHandlerMapping {
 }
 ```
 
-**注意：**资源目录下有`index.html`，静态资源访问规则也必须为`/**`，具体原因看下图
+**注意：** 资源目录下有`index.html`，静态资源访问规则也必须为`/**`，具体原因看下图
 
 ![](./images/static-index.png)
 
