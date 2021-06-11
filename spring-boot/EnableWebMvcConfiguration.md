@@ -155,18 +155,18 @@ public static class EnableWebMvcConfiguration extends DelegatingWebMvcConfigurat
     
     ...
     
-	/**
-	 * 欢迎页映射处理器
-	 */
+    /**
+     * 欢迎页映射处理器
+     */
     @Bean
     public WelcomePageHandlerMapping welcomePageHandlerMapping(ApplicationContext applicationContext,
                                                                FormattingConversionService mvcConversionService, 
                                                                ResourceUrlProvider mvcResourceUrlProvider) {
-		/**
-		 * 创建欢迎页映射处理器
-		 * getWelcomePage()是从静态资源目录获取index.html
-		 * this.mvcProperties.getStaticPathPattern() 静态资源访问路径前缀
-		 */
+        /**
+         * 创建欢迎页映射处理器
+         * getWelcomePage()是从静态资源目录获取index.html
+         * this.mvcProperties.getStaticPathPattern() 静态资源访问路径前缀
+         */
         WelcomePageHandlerMapping welcomePageHandlerMapping = new WelcomePageHandlerMapping(
             new TemplateAvailabilityProviders(applicationContext), applicationContext, getWelcomePage(),
             this.mvcProperties.getStaticPathPattern());
