@@ -110,6 +110,8 @@ public static class EnableWebMvcConfiguration extends DelegatingWebMvcConfigurat
 }
 ```
 
+对浏览器缓存机制不太理解的可以查看[这篇文章](../web/浏览器的缓存机制.md)
+
 #### 默认主页源码(注释版)
 
 **`WelcomePageHandlerMapping`部分源码：**
@@ -141,6 +143,8 @@ final class WelcomePageHandlerMapping extends AbstractUrlHandlerMapping {
 **注意：** 资源目录下有`index.html`，静态资源访问规则也必须为`/**`，具体原因看下图
 
 ![](./images/static-index.png)
+
+[示例程序](./spring-boot-demo/static-resources-personalized)
 
 当静态资源访问规则（static-path-pattern）复杂时可能就过滤掉了根目录的资源，所以根本无法访问根目录的`index.html`。
 
