@@ -49,6 +49,7 @@
 - [【源码解析】@SpringBootApplication 详解](./spring-boot/@SpringBootApplication详解.md)
 - [spring-boot启动过程（简单分析）](./spring-boot/spring-boot启动过程（简单分析）.md)
 - [spring-boot启动过程（源码分析）](./spring-boot/spring-boot启动过程（源码分析）.md)
+- [WebMvcAutoConfiguration.EnableWebMvcConfiguration的作用](./spring-boot/EnableWebMvcConfiguration.md)
 
 # web
 

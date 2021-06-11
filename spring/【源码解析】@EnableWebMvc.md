@@ -226,5 +226,5 @@ public class Application {
 
 ## 延伸阅读
 
-- [spring-boot的EnableWebMvcConfiguration类 ,相当于注解 @EnableWebMvc（还没写）](../spring-boot/EnableWebMvcConfiguration.md)
+- [spring-boot的EnableWebMvcConfiguration类 ,相当于注解 @EnableWebMvc](../spring-boot/EnableWebMvcConfiguration.md)
 

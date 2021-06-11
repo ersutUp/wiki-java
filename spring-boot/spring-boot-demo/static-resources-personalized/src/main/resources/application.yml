@@ -2,6 +2,7 @@ spring:
   mvc:
     #更改静态资源拦截器规则
     static-path-pattern: /res/**
+#    static-path-pattern: /res/f?/**/*.html
   web:
     resources:
       static-locations: classpath:/res/
