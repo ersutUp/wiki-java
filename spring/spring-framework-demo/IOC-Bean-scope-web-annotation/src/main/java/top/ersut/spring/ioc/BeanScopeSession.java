@@ -1,27 +1,31 @@
 package top.ersut.spring.ioc;
 
+import lombok.Data;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
+import org.springframework.web.context.WebApplicationContext;
+import org.springframework.web.context.annotation.SessionScope;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
-
+import java.io.Serializable;
+@Data
 @Component
-@Scope("prototype")
-public class BeanScopePrototype {
+@Scope(WebApplicationContext.SCOPE_SESSION)
+public class BeanScopeSession implements Serializable {
 
-    public boolean callInit = false;
-    public boolean callDestroy = false;
+    private static final long serialVersionUID = 1L;
+
+    private int num = 1;
+
 
     @PostConstruct
     public void init(){
-        callInit = true;
         System.out.println(this+" call init");
     }
 
     @PreDestroy
     public void destroy(){
-        callDestroy = true;
         System.out.println(this+" call destroy");
     }
 

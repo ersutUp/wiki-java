@@ -27,6 +27,7 @@
 		<module>xml-import</module>
 		<module>IOC-annotation</module>
 		<module>IOC-Bean-scope-annotation</module>
+		<module>IOC-Bean-scope-web-annotation</module>
 		<module>IOC-Bean-life-cycle-annotation</module>
 		<module>AOP-dynamicProxy-JDK</module>
 		<module>AOP-dynamicProxy-CGLIB</module>
@@ -99,6 +100,11 @@
 			<groupId>org.springframework</groupId>
 			<artifactId>spring-expression</artifactId>
 			<version>${spring.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.projectlombok</groupId>
+			<artifactId>lombok</artifactId>
+			<version>1.18.18</version>
 		</dependency>
 
 		<dependency>
