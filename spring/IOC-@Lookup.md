@@ -76,7 +76,7 @@ public class ApplicationDemo {
 
 [测试用例](./spring-framework-demo/IOC-annotation-lookup/src/test/java/top/ersut/spring/ioc/ApplicationDemoTest.java)
 
-```
+```java
 class ApplicationDemoTest {
     @Test
     public void test(){
