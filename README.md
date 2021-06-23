@@ -16,6 +16,7 @@
 - [IOC控制反转的使用](./spring/IOC.md)
 	- [对IOC的理解](./spring/阅读官方文档后对IOC的理解.md)
 	- [方法注入-@Lookup注解](./spring/IOC-@Lookup.md)
+	- [bean 的作用域](./spring/IOC-bean-scope.md)
 - [AOP面向切面编程](./spring/AOP.md)
 	- [spring-aop的实现原理](./spring/AOP.md#spring-aop的实现原理)
 	- [动态代理的两种方式](./spring/AOP.md#动态代理的两种方式)

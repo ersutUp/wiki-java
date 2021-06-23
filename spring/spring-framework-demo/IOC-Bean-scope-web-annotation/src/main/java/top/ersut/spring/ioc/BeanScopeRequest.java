@@ -2,11 +2,10 @@ package top.ersut.spring.ioc;
 
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
+import org.springframework.web.context.WebApplicationContext;
 
-import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
 
 @Component
-@Scope("request")
+@Scope(WebApplicationContext.SCOPE_REQUEST)
 public class BeanScopeRequest {
 }
