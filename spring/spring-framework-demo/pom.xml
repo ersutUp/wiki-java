@@ -25,6 +25,7 @@
 		<module>IOC-Bean-scope</module>
 		<module>IOC-Bean-life-cycle</module>
 		<module>IOC-annotation-lookup</module>
+		<module>IOC-Bean-inferred</module>
 		<module>xml-import</module>
 		<module>IOC-annotation</module>
 		<module>IOC-Bean-scope-annotation</module>
