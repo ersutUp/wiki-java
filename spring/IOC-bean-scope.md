@@ -39,7 +39,7 @@
 
 3. session作用域下，实现的方式是将bean序列化存入session中，使用时在session中取出反序列化给bean，具体看下图
 
-  ![](D:/my/wiki-java/spring/images/ioc-scope-session.png)
+  ![](./images/ioc-scope-session.png)
 
 
 
