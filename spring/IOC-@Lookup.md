@@ -10,7 +10,7 @@
 
 ### 应用场景
 
-当单利bean内使用非单利bean时，如果通过`@Autowired`给非单例bean注入那么只有一次注入机会，这个时候就会发现非单例bean变成单利的了，解决这个问题就需要`@Lookup`。
+当单利bean内使用prototype作用域的bean时，如果通过`@Autowired`给非单例bean注入那么只有一次注入机会，这个时候就会发现非单例bean变成单利的了，解决这个问题就需要`@Lookup`。
 
 ### `@Autowired`注入示例（复现问题）
 
