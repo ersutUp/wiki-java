@@ -47,6 +47,7 @@
 		<module>webFlux-annotation</module>
 		<module>MVC-annotation</module>
 		<module>enableWebMvc-use</module>
+		<module>mail-send-demo</module>
 	</modules>
 
 	<dependencyManagement>
