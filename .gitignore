@@ -4,3 +4,6 @@
 spring/spring5-helloWorld/.idea/
 spring/spring-framework-demo/.idea/
 java/java-demo/.idea/
+java/**/target/**
+spring/**/target/**
+待验证/**/target/**
