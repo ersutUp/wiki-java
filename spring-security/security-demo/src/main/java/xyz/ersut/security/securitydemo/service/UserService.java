@@ -5,4 +5,6 @@ import xyz.ersut.security.securitydemo.utils.result.ResultJson;
 
 public interface UserService {
     ResultJson login(User user);
+
+    ResultJson logout();
 }

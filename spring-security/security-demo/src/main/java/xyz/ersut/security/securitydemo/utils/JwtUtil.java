@@ -82,7 +82,8 @@ public class JwtUtil {
 
             String token = createJWT("{\"key\":\"haha\"}");
             System.out.println(token);
-            Claims claims = parseJWT("eyJhbGciOiJIUzI1NiJ9.eyJqdGkiOiIzZGZhN2M4NzhiZTQ0YjczOWY0YzNkNDMzODU5YjNjOSIsInN1YiI6IntcImtleVwiOlwiaGFoYVwifSIsImlzcyI6ImVyc3V0IiwiaWF0IjoxNjQ3NDIxNjcwLCJleHAiOjE2NDc0MjUyNzB9.BbjkONWDDb5UPiQe9JqPeFLmI0duaCZcVcri0wEknQY");
+            Claims claims = parseJWT("eyJhbGciOiJIUzI1NiJ9.eyJqdGkiOiI2ODQwOWZmZTY1Nzk0ZjgwYmQxNWFkYzdkNjEzOGM1ZCIsInN1YiI6IntcImtleVwiOlwiaGFoYVwifSIsImlzcyI6ImVyc3V0IiwiaWF0IjoxNjQ3NDM2Nzk2LCJleHAiOjE2NDc0NDAzOTZ9.jKPMoxrqoUeq66yXv0GROTW76htEMv1gEelGM4UeieM");
+            claims.setExpiration(new Date());
             System.out.println(claims);
             System.out.println(claims.getSubject());
         } catch (ExpiredJwtException e){

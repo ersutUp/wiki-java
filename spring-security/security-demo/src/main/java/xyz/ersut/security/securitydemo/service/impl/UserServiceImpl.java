@@ -6,6 +6,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import xyz.ersut.security.securitydemo.config.security.LoginUser;
 import xyz.ersut.security.securitydemo.config.security.SecurityConfig;
@@ -60,5 +61,15 @@ public class UserServiceImpl implements UserService {
         loginUserCache.put(userId,loginUser);
 
         return ResultJson.generateResultJson(ResultSystemCode.SUCCESS,data);
+    }
+
+    @Override
+    public ResultJson logout() {
+        //获取当前登录用户
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        LoginUser loginUser = (LoginUser)authentication.getPrincipal();
+        //清楚缓存数据
+        loginUserCache.invalidate(loginUser.getUser().getId());
+        return new ResultJson(ResultSystemCode.SUCCESS,"登出成功");
     }
 }
