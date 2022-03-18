@@ -22,8 +22,8 @@ public class MyUserDetailsService implements UserDetailsService {
         }
 
         //todo 查询权限
-        List<String> role = Arrays.asList("teacher","student");
+        List<String> permissions = Arrays.asList("teacher","student");
 
-        return LoginUser.builder().user(user).permissions(role).build();
+        return LoginUser.builder().user(user).permissions(permissions).build();
     }
 }

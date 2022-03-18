@@ -1,5 +1,7 @@
 package xyz.ersut.security.securitydemo.config.security;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -23,10 +25,18 @@ public class LoginUser implements UserDetails {
 
     private List<String> permissions;
 
+    @JsonIgnore
+    private List<GrantedAuthority> grantedAuthorityList;
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return permissions.stream().map(SimpleGrantedAuthority::new).collect(Collectors.toList());
-//        return null;
+        if(grantedAuthorityList != null){
+            return grantedAuthorityList;
+        }
+
+        grantedAuthorityList = permissions.stream().map(SimpleGrantedAuthority::new).collect(Collectors.toList());
+
+        return grantedAuthorityList;
     }
 
     @Override
