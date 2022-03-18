@@ -7,6 +7,10 @@ import org.springframework.util.ObjectUtils;
 import xyz.ersut.security.securitydemo.SecurityDemoApplication;
 import xyz.ersut.security.securitydemo.pojo.entity.User;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 public class MyUserDetailsService implements UserDetailsService {
 
     @Override
@@ -18,7 +22,8 @@ public class MyUserDetailsService implements UserDetailsService {
         }
 
         //todo 查询权限
+        List<String> role = Arrays.asList("teacher","student");
 
-        return LoginUser.builder().user(user).build();
+        return LoginUser.builder().user(user).permissions(role).build();
     }
 }
