@@ -22,7 +22,7 @@ public class MyUserDetailsService implements UserDetailsService {
         }
 
         //查询权限
-        List<String> permissions = SecurityDemoApplication.selectPermsByUserId(user.getId());
+        String[] permissions = SecurityDemoApplication.selectPermsByUserId(user.getId());
 
         return LoginUser.builder().user(user).permissions(permissions).build();
     }

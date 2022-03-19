@@ -87,7 +87,7 @@ public class SecurityDemoApplication {
      * @param userId
      * @return
      */
-    public static List<String> selectPermsByUserId(Long userId){
+    public static String[] selectPermsByUserId(Long userId){
         /** 查询角色权限 **/
         List<RoleMenu> roleMenuList = new ArrayList<>();
         List<RoleUser> roleUsers = roleUserByUserId.get(userId);
@@ -113,7 +113,7 @@ public class SecurityDemoApplication {
         });
 
         //返回
-        return menuList;
+        return menuList.toArray(new String[menuList.size()]);
     }
 
     public static void main(String[] args) {

@@ -11,8 +11,10 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import xyz.ersut.security.securitydemo.pojo.entity.User;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Data
@@ -23,7 +25,14 @@ public class LoginUser implements UserDetails {
 
     private User user;
 
-    private List<String> permissions;
+    private String[] permissions;
+
+    /**
+     * 用户当前访问所匹配的权限
+     * 便于在开发中使用
+     */
+    @JsonIgnore
+    private Set<String> currentPermissions;
 
     @JsonIgnore
     private List<GrantedAuthority> grantedAuthorityList;
@@ -34,7 +43,7 @@ public class LoginUser implements UserDetails {
             return grantedAuthorityList;
         }
 
-        grantedAuthorityList = permissions.stream().map(SimpleGrantedAuthority::new).collect(Collectors.toList());
+        grantedAuthorityList = Arrays.stream(permissions).map(SimpleGrantedAuthority::new).collect(Collectors.toList());
 
         return grantedAuthorityList;
     }

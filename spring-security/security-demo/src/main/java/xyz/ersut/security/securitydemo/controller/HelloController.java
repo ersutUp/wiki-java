@@ -14,7 +14,7 @@ public class HelloController {
     }
 
     @GetMapping("/hello/world")
-    @PreAuthorize("hasAuthority('sys:helloWorld:list')")
+    @PreAuthorize("@cex.hasAuthority('sys:.*:.*')")
     public String helloWorld(){
         return "hello world";
     }
