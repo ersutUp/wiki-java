@@ -19,4 +19,10 @@ public class HelloController {
         return "hello world";
     }
 
+    @GetMapping("/hello/human")
+    @PreAuthorize("hasAuthority('teacher1')")
+    public String helloHuman(){
+        return "hello human";
+    }
+
 }

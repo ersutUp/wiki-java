@@ -6,22 +6,13 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * 用户表
+ * 角色权限中间表
  */
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class User {
-
-    private Long id;
-
-    private String userName;
-
-    private String password;
-
-    private Integer sex;
-
-    private Integer age;
-
+public class RoleMenu {
+    private Long roleId;
+    private Long menuId;
 }
