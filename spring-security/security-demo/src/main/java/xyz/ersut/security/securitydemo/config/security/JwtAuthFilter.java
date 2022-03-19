@@ -7,6 +7,7 @@ import io.jsonwebtoken.ExpiredJwtException;
 import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.units.qual.A;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -53,7 +54,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 claims = ((ExpiredJwtException) e).getClaims();
                 log.info("于[{}]登录过期,token解密信息[{}]",claims.getExpiration(),claims.getSubject());
             }
-            WebUtils.renderString(response,objectMapper.writeValueAsString(new ResultJson(ResultSystemCode.AUTH_ERROR,"token不合法")));
+            WebUtils.renderString(response,HttpStatus.UNAUTHORIZED.value(), objectMapper.writeValueAsString(new ResultJson(ResultSystemCode.AUTH_ERROR,"token不合法")));
             return;
         }
         //获取用户id
@@ -64,7 +65,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         if(ObjectUtils.isEmpty(loginUser)){
             log.info("缓存中没有信息,token解密信息[{}]",claims.getSubject());
-            WebUtils.renderString(response,objectMapper.writeValueAsString(new ResultJson(ResultSystemCode.AUTH_ERROR,"用户未登录")));
+            WebUtils.renderString(response, HttpStatus.UNAUTHORIZED.value(), objectMapper.writeValueAsString(new ResultJson(ResultSystemCode.AUTH_ERROR,"用户未登录")));
             return;
         }
 

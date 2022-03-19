@@ -2,13 +2,20 @@ package xyz.ersut.security.securitydemo.config;
 
 import lombok.extern.slf4j.Slf4j;
 
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.util.ObjectUtils;
 import org.springframework.validation.BindException;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
+import xyz.ersut.security.securitydemo.config.security.LoginUser;
 import xyz.ersut.security.securitydemo.exception.code.CodeException;
 import xyz.ersut.security.securitydemo.exception.login.LoginException;
 import xyz.ersut.security.securitydemo.utils.result.ResultJson;
@@ -30,17 +37,35 @@ import java.util.List;
 public class GlobalExceptionHandlerConfig {
 
 
-
+    /*spring security*/
     @ExceptionHandler(value = LoginException.class)
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
     public ResultJson loginExceptionHandler(HttpServletRequest request, LoginException loginException){
         log.info("认证失败,errMsg[{}]",loginException.getMessage());
         return new ResultJson(ResultSystemCode.AUTH_ERROR,loginException.getMessage());
     }
+    @ExceptionHandler(value = AccessDeniedException.class)
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    public ResultJson accessDeniedHandler(HttpServletRequest request, AccessDeniedException accessDeniedException){
+        LoginUser loginUser = (LoginUser)SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        log.info("security 权限不足,errMsg[{}],url：[{}],userId:[{}]",accessDeniedException.getMessage(),request.getRequestURI(),loginUser.getUser().getId());
+        return new ResultJson(ResultSystemCode.PERMISSIONS_ERROR,accessDeniedException.getMessage());
+    }
+    @ExceptionHandler(value = AuthenticationException.class)
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    public ResultJson authenticationExceptionHandler(HttpServletRequest request, AuthenticationException authenticationException){
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if(principal instanceof LoginUser){
+            LoginUser loginUser = (LoginUser)principal;
+            log.info("security 认证失败,errMsg[{}],url：[{}],userId:[{}]",authenticationException.getMessage(),request.getRequestURI(),loginUser.getUser().getId());
+        } else {
+            log.info("security 认证失败,errMsg[{}],url：[{}],userId:[{}]",authenticationException.getMessage(),request.getRequestURI(),principal);
+        }
+        return new ResultJson(ResultSystemCode.AUTH_ERROR,authenticationException.getMessage());
+    }
 
 
-
-
+    /** 自定义异常 */
     @ExceptionHandler(value = CodeException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ResultJson codeExceptionHandler(HttpServletRequest request, CodeException codeException) {

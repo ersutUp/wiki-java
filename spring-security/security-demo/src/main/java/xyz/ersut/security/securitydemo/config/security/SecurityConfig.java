@@ -18,6 +18,8 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.AuthenticationEntryPoint;
+import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.util.ObjectUtils;
 import xyz.ersut.security.securitydemo.SecurityDemoApplication;
@@ -32,6 +34,12 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
     @Autowired
     private JwtAuthFilter jwtAuthFilter;
+
+    @Autowired
+    private AccessDeniedHandler accessDeniedHandler;
+
+    @Autowired
+    private AuthenticationEntryPoint authenticationEntryPoint;
 
     //配置 用户读取的位置（数据库还是缓存或者内存）
     @Bean
@@ -61,8 +69,16 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .antMatchers("/hello").permitAll()
                 //其他接口都需要认证
                 .anyRequest().authenticated();
+
+        //异常处理（这里不使用，使用spring的全局异常代替）
+/*        http
+                .exceptionHandling()
+                .authenticationEntryPoint(authenticationEntryPoint)
+                .accessDeniedHandler(accessDeniedHandler);*/
+
         //将jwt认证过滤器加入Security过滤器链中，并放在 UsernamePasswordAuthenticationFilter 之前
         http.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+
     }
 
     //暴漏 AuthenticationManager

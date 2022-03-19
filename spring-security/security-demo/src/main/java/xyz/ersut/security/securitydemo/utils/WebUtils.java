@@ -13,10 +13,14 @@ public class WebUtils
      * @param string 待渲染的字符串
      * @return null
      */
-    public static String renderString(HttpServletResponse response, String string) {
+    public static void renderString(HttpServletResponse response, String string) {
+        renderString(response,200,string);
+    }
+
+    public static void renderString(HttpServletResponse response , Integer code, String string) {
         try
         {
-            response.setStatus(200);
+            response.setStatus(code);
             response.setContentType("application/json");
             response.setCharacterEncoding("utf-8");
             response.getWriter().print(string);
@@ -25,6 +29,5 @@ public class WebUtils
         {
             e.printStackTrace();
         }
-        return null;
     }
 }

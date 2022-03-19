@@ -17,6 +17,7 @@ public enum ResultSystemCode implements Resultcode {
     TIMEOUT(20005,"访问超时"),
     ILLEGAL(20006,"非法请求"),
     AUTH_ERROR(20007,"认证失败"),
+    PERMISSIONS_ERROR(20008,"权限不足"),
 
     ;
     @Getter

@@ -33,13 +33,7 @@ public class UserServiceImpl implements UserService {
     public ResultJson login(User user) {
         //获取 AuthenticationManager
         Authentication authentication = new UsernamePasswordAuthenticationToken(user.getUserName(),user.getPassword());
-        Authentication authenticate;
-        try{
-            authenticate = authenticationManager.authenticate(authentication);
-        } catch (BadCredentialsException e){
-            //账号密码认证失败
-            return new ResultJson(ResultSystemCode.AUTH_ERROR,e.getMessage());
-        }
+        Authentication authenticate = authenticationManager.authenticate(authentication);
 
         if(Objects.isNull(authenticate)){
             return new ResultJson(ResultSystemCode.AUTH_ERROR,"登录失败");
