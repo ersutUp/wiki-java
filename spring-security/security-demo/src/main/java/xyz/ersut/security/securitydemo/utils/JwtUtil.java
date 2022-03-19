@@ -82,7 +82,7 @@ public class JwtUtil {
 
             String token = createJWT("{\"key\":\"haha\"}");
             System.out.println(token);
-            Claims claims = parseJWT(token);
+            Claims claims = parseJWT("eyJhbGciOiJIUzI1NiJ9.eyJqdGkiOiIzZGZhN2M4NzhiZTQ0YjczOWY0YzNkNDMzODU5YjNjOSIsInN1YiI6IntcImtleVwiOlwiaGFoYVwifSIsImlzcyI6ImVyc3V0IiwiaWF0IjoxNjQ3NDIxNjcwLCJleHAiOjE2NDc0MjUyNzB9.BbjkONWDDb5UPiQe9JqPeFLmI0duaCZcVcri0wEknQY");
             System.out.println(claims);
             System.out.println(claims.getSubject());
         } catch (ExpiredJwtException e){

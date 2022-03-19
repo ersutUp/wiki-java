@@ -7,7 +7,8 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
-import xyz.ersut.security.securitydemo.config.SecurityConfig;
+import xyz.ersut.security.securitydemo.config.security.LoginUser;
+import xyz.ersut.security.securitydemo.config.security.SecurityConfig;
 import xyz.ersut.security.securitydemo.pojo.entity.User;
 import xyz.ersut.security.securitydemo.service.UserService;
 import xyz.ersut.security.securitydemo.utils.JwtUtil;
@@ -25,7 +26,7 @@ public class UserServiceImpl implements UserService {
     private AuthenticationManager authenticationManager;
 
     @Autowired
-    private Cache<Long, SecurityConfig.LoginUser> loginUserCache;
+    private Cache<Long, LoginUser> loginUserCache;
 
     @Override
     public ResultJson login(User user) {
@@ -44,7 +45,7 @@ public class UserServiceImpl implements UserService {
         }
 
         //获取数据库中的真实用户
-        SecurityConfig.LoginUser loginUser = (SecurityConfig.LoginUser) authenticate.getPrincipal();
+        LoginUser loginUser = (LoginUser) authenticate.getPrincipal();
         User userDB = loginUser.getUser();
         Long userId = userDB.getId();
 

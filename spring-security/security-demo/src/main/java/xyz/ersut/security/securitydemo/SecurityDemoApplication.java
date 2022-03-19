@@ -2,6 +2,7 @@ package xyz.ersut.security.securitydemo;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.EnableAspectJAutoProxy;
 import xyz.ersut.security.securitydemo.pojo.entity.User;
 
 import java.util.ArrayList;
@@ -9,7 +10,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-
+//开启AOP
+@EnableAspectJAutoProxy(exposeProxy = true)
 @SpringBootApplication
 public class SecurityDemoApplication {
 
