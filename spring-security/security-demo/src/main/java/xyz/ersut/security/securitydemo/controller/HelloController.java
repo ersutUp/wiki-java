@@ -14,13 +14,13 @@ public class HelloController {
     }
 
     @GetMapping("/hello/world")
-    @PreAuthorize("hasAuthority('teacher1')")
+    @PreAuthorize("hasAuthority('sys:helloWorld:list')")
     public String helloWorld(){
         return "hello world";
     }
 
     @GetMapping("/hello/human")
-    @PreAuthorize("hasAuthority('teacher1')")
+    @PreAuthorize("hasAuthority('sys:helloHuman:list')")
     public String helloHuman(){
         return "hello human";
     }

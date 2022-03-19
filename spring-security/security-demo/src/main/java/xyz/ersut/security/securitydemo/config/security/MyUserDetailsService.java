@@ -21,8 +21,8 @@ public class MyUserDetailsService implements UserDetailsService {
             throw new RuntimeException("用户不存在");
         }
 
-        //todo 查询权限
-        List<String> permissions = Arrays.asList("teacher","student");
+        //查询权限
+        List<String> permissions = SecurityDemoApplication.selectPermsByUserId(user.getId());
 
         return LoginUser.builder().user(user).permissions(permissions).build();
     }
