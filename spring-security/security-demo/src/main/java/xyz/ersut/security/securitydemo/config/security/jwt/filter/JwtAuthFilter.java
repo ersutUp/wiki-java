@@ -1,11 +1,10 @@
-package xyz.ersut.security.securitydemo.config.security;
+package xyz.ersut.security.securitydemo.config.security.jwt.filter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.benmanes.caffeine.cache.Cache;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import lombok.extern.slf4j.Slf4j;
-import org.checkerframework.checker.units.qual.A;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -14,8 +13,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.util.ObjectUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
-import xyz.ersut.security.securitydemo.exception.code.CodeException;
-import xyz.ersut.security.securitydemo.exception.login.LoginException;
+import xyz.ersut.security.securitydemo.config.security.jwt.LoginUser;
 import xyz.ersut.security.securitydemo.utils.JwtUtil;
 import xyz.ersut.security.securitydemo.utils.WebUtils;
 import xyz.ersut.security.securitydemo.utils.result.ResultJson;

@@ -1,14 +1,13 @@
 package xyz.ersut.security.securitydemo.config.security.expression;
 
-import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.util.ObjectUtils;
-import xyz.ersut.security.securitydemo.config.security.LoginUser;
+import xyz.ersut.security.securitydemo.config.security.AuthUser;
+import xyz.ersut.security.securitydemo.config.security.jwt.LoginUser;
 
 import java.util.Arrays;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -28,9 +27,9 @@ public class CustomExpression {
      */
     public final boolean hasAnyAuthority(String... authorities) {
         //当前用户获取权限
-        LoginUser loginUser = (LoginUser) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        AuthUser authUser = (AuthUser) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
 
-        String[] permissions = loginUser.getPermissions();
+        String[] permissions = authUser.getPermissions();
 
         if (ObjectUtils.isEmpty(permissions)) {
             return false;
@@ -51,8 +50,8 @@ public class CustomExpression {
         if(ObjectUtils.isEmpty(currentPermissions)){
             return false;
         }
-        //放入LoginUser
-        loginUser.setCurrentPermissions(currentPermissions);
+        //放入authUser
+        authUser.setCurrentPermissions(currentPermissions);
 
         return true;
     }

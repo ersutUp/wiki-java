@@ -1,15 +1,12 @@
-package xyz.ersut.security.securitydemo.config.security;
+package xyz.ersut.security.securitydemo.config.security.jwt;
 
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.util.ObjectUtils;
 import xyz.ersut.security.securitydemo.SecurityDemoApplication;
+import xyz.ersut.security.securitydemo.config.security.jwt.LoginUser;
 import xyz.ersut.security.securitydemo.pojo.entity.User;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
 public class MyUserDetailsService implements UserDetailsService {
 
@@ -24,6 +21,8 @@ public class MyUserDetailsService implements UserDetailsService {
         //查询权限
         String[] permissions = SecurityDemoApplication.selectPermsByUserId(user.getId());
 
-        return LoginUser.builder().user(user).permissions(permissions).build();
+        LoginUser loginUser = LoginUser.builder().user(user).build();
+        loginUser.setPermissions(permissions);
+        return loginUser;
     }
 }

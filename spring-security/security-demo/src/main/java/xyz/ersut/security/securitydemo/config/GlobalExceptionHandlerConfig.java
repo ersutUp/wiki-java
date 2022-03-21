@@ -2,27 +2,23 @@ package xyz.ersut.security.securitydemo.config;
 
 import lombok.extern.slf4j.Slf4j;
 
-import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.util.ObjectUtils;
 import org.springframework.validation.BindException;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
-import xyz.ersut.security.securitydemo.config.security.LoginUser;
+import xyz.ersut.security.securitydemo.config.security.jwt.LoginUser;
 import xyz.ersut.security.securitydemo.exception.code.CodeException;
 import xyz.ersut.security.securitydemo.exception.login.LoginException;
 import xyz.ersut.security.securitydemo.utils.result.ResultJson;
 import xyz.ersut.security.securitydemo.utils.result.code.ResultSystemCode;
 import xyz.ersut.security.securitydemo.utils.result.code.Resultcode;
 
-import javax.annotation.PostConstruct;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.util.List;

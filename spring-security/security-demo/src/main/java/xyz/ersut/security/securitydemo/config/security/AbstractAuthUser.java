@@ -1,15 +1,10 @@
 package xyz.ersut.security.securitydemo.config.security;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
-import xyz.ersut.security.securitydemo.pojo.entity.User;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -18,12 +13,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 @Data
-@AllArgsConstructor
-@NoArgsConstructor
-@Builder
-public class LoginUser implements UserDetails {
-
-    private User user;
+public abstract class AbstractAuthUser implements AuthUser, UserDetails {
 
     private String[] permissions;
 
@@ -43,19 +33,9 @@ public class LoginUser implements UserDetails {
             return grantedAuthorityList;
         }
 
-        grantedAuthorityList = Arrays.stream(permissions).map(SimpleGrantedAuthority::new).collect(Collectors.toList());
+        grantedAuthorityList = Arrays.stream(getPermissions()).map(SimpleGrantedAuthority::new).collect(Collectors.toList());
 
         return grantedAuthorityList;
-    }
-
-    @Override
-    public String getPassword() {
-        return user.getPassword();
-    }
-
-    @Override
-    public String getUsername() {
-        return user.getUserName();
     }
 
     @Override

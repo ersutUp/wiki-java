@@ -1,9 +1,5 @@
 package xyz.ersut.security.securitydemo.config.security;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -12,20 +8,16 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.util.ObjectUtils;
-import xyz.ersut.security.securitydemo.SecurityDemoApplication;
-import xyz.ersut.security.securitydemo.pojo.entity.User;
-
-import java.util.Collection;
+import xyz.ersut.security.securitydemo.config.security.jwt.MyUserDetailsService;
+import xyz.ersut.security.securitydemo.config.security.jwt.filter.JwtAuthFilter;
+import xyz.ersut.security.securitydemo.config.security.openapi.filter.OpenAPIFilter;
+import xyz.ersut.security.securitydemo.config.security.openapi.provider.OpenApiAuthenticationProvider;
 
 @Configuration
 //开启注解式权限
@@ -34,6 +26,8 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
     @Autowired
     private JwtAuthFilter jwtAuthFilter;
+    @Autowired
+    private OpenAPIFilter openAPIFilter;
 
     @Autowired
     private AccessDeniedHandler accessDeniedHandler;
@@ -70,14 +64,18 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 //其他接口都需要认证
                 .anyRequest().authenticated();
 
-        //异常处理（这里不使用，使用spring的全局异常代替）
-/*        http
+        //异常处理（如果有使用spring的全局异常并捕获了Exception异常，那么AccessDeniedException和AuthenticationException也需要捕获）
+        http
                 .exceptionHandling()
                 .authenticationEntryPoint(authenticationEntryPoint)
-                .accessDeniedHandler(accessDeniedHandler);*/
+                .accessDeniedHandler(accessDeniedHandler);
 
         //将jwt认证过滤器加入Security过滤器链中，并放在 UsernamePasswordAuthenticationFilter 之前
         http.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+
+        http
+                .authenticationProvider(new OpenApiAuthenticationProvider())
+                .addFilterBefore(openAPIFilter, UsernamePasswordAuthenticationFilter.class);
 
         //允许跨域
         http.cors();
