@@ -43,8 +43,13 @@ public class GlobalExceptionHandlerConfig {
     @ExceptionHandler(value = AccessDeniedException.class)
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
     public ResultJson accessDeniedHandler(HttpServletRequest request, AccessDeniedException accessDeniedException){
-        LoginUser loginUser = (LoginUser)SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        log.info("security 权限不足,errMsg[{}],url：[{}],userId:[{}]",accessDeniedException.getMessage(),request.getRequestURI(),loginUser.getUser().getId());
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if(principal instanceof LoginUser) {
+            LoginUser loginUser = (LoginUser) principal;
+            log.info("security 权限不足,errMsg[{}],url：[{}],userId:[{}]", accessDeniedException.getMessage(), request.getRequestURI(), loginUser.getUser().getId());
+        } else {
+            log.info("security 权限不足,errMsg[{}],url：[{}]", accessDeniedException.getMessage(), request.getRequestURI());
+        }
         return new ResultJson(ResultSystemCode.PERMISSIONS_ERROR,accessDeniedException.getMessage());
     }
     @ExceptionHandler(value = AuthenticationException.class)

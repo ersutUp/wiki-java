@@ -11,9 +11,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class Application {
 
-    private String appid;
+    private String appId;
 
-    private String appkey;
+    private String appKey;
 
     private String name;
 }

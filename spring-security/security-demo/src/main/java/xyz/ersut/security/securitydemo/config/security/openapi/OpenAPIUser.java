@@ -30,11 +30,11 @@ public class OpenAPIUser extends AbstractAuthUser {
 
     @Override
     public String getPassword() {
-        return application.getAppkey();
+        return application.getAppKey();
     }
 
     @Override
     public String getUsername() {
-        return application.getAppid();
+        return application.getAppId();
     }
 }

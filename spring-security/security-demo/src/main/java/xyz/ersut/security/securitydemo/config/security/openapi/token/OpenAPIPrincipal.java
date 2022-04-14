@@ -11,8 +11,10 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class OpenAPIPrincipal {
 
-    private String appid;
+    private String appId;
 
     private String params;
+
+    private String timestamp;
 
 }

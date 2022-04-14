@@ -1,10 +1,13 @@
 package xyz.ersut.security.securitydemo.config.security.openapi.filter;
 
+import cn.hutool.core.io.IoUtil;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.core.Authentication;
@@ -24,9 +27,10 @@ import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.io.BufferedReader;
 import java.io.IOException;
-import java.util.Date;
-import java.util.Objects;
+import java.io.InputStreamReader;
+import java.util.*;
 
 @Slf4j
 @Component
@@ -35,9 +39,9 @@ public class OpenAPIFilter extends OncePerRequestFilter {
     public static final String OPEN_API_PREFIX = "/api";
 
     //header头的key
-    private static final String HEADER_APPID = "_appId";
-    private static final String HEADER_SIGN = "_sign";
-    private static final String HEADER_TIMESTAMP = "_timestamp";
+    public static final String HEADER_APPID = "_appId";
+    public static final String HEADER_SIGN = "_sign";
+    public static final String HEADER_TIMESTAMP = "_timestamp";
 
     //超时时间
     private static final int OVERTIME = 30000;
@@ -60,27 +64,83 @@ public class OpenAPIFilter extends OncePerRequestFilter {
 
         /**校验时间戳*/
         String timestamp = request.getHeader(HEADER_TIMESTAMP);
+        if (log.isDebugEnabled()){
+            log.debug("当前请求的时间戳：[{}],url:[{}]",timestamp,uri);
+        }
         if (!timestampVerify(response,timestamp)) {
-            log.info("时间戳出错,url:[{}]，请求中的时间戳：[{}]",request.getRequestURI(),timestamp);
+            log.info("时间戳出错,url:[{}]，请求中的时间戳：[{}]",uri,timestamp);
             return;
         }
 
         //获取签名
+        String sign = request.getHeader(HEADER_SIGN);
+        if (log.isDebugEnabled()){
+            log.debug("当前请求的签名：[{}],url:[{}]",sign,uri);
+        }
+        if(ObjectUtils.isEmpty(sign)){
+            log.info("没有签名,url:[{}]",uri);
+            WebUtils.renderString(response, HttpStatus.BAD_REQUEST.value(), objectMapper.writeValueAsString(ResultJson.generateResultJson(ResultSystemCode.ILLEGAL)));
+            return;
+        }
 
-        //获取参数
+        //获取appId
+        String appId = request.getHeader(HEADER_APPID);
+        if (log.isDebugEnabled()){
+            log.debug("当前请求的appId：[{}],url:[{}]",appId,uri);
+        }
+        if(ObjectUtils.isEmpty(appId)){
+            log.info("没有appid,url:[{}]",uri);
+            WebUtils.renderString(response, HttpStatus.BAD_REQUEST.value(), objectMapper.writeValueAsString(ResultJson.generateResultJson(ResultSystemCode.ILLEGAL)));
+            return;
+        }
 
+        String method = request.getMethod();
+        if (log.isDebugEnabled()){
+            log.debug("当前请求的方法：[{}],url:[{}]",method,uri);
+        }
+        StringBuilder params = new StringBuilder("");
+        //get请求获取参数 非get请求获取json串
+        if("GET".equalsIgnoreCase(method)){
+            SortedMap<String, String[]> parameterMap = new TreeMap<>(request.getParameterMap());
+            //判断参数不为空
+            if(!ObjectUtils.isEmpty(parameterMap)){
+                Iterator<SortedMap.Entry<String, String[]>> ParamIterator = parameterMap.entrySet().iterator();
+                //遍历并排序参数
+                while (ParamIterator.hasNext()){
+                    SortedMap.Entry<String, String[]> entry = ParamIterator.next();
+                    String[] value = entry.getValue();
+                    //筛选value值为多个的参数
+                    if(value.length == 1){
+                        params.append(entry.getKey());
+                        params.append("=");
+                        params.append(value[0]);
+                        params.append("&");
+                    }
+                }
+            }
+        } else {
+            BufferedReader reader = new BufferedReader(new InputStreamReader(request.getInputStream()));
+            String body = IoUtil.read(reader);
+            if(!ObjectUtils.isEmpty(body)){
+                body += "&";
+            }
+            params.append(body);
+        }
+        if (log.isDebugEnabled()){
+            log.debug("当前请求中的参数：[{}],url:[{}]",params,uri);
+        }
 
-        //排序参数并拼装字符串
 
         //封装信息
         OpenAPIPrincipal openAPIPrincipal = OpenAPIPrincipal
                                                     .builder()
-                                                    .appid("111")
-                                                    .params("a=1&b=2&c=3&_appid=xxx&_timestamp=12345678&appkey=test")
+                                                    .appId(appId)
+                                                    .params(params.toString())
+                                                    .timestamp(timestamp)
                                                     .build();
 
         //封装 LoginUser 放入 SecurityContextHolder
-        Authentication openAPIAuthenticationToken = new OpenAPIAuthenticationToken(openAPIPrincipal,"36af22a258478500b74ed4d2af8685ae");
+        Authentication openAPIAuthenticationToken = new OpenAPIAuthenticationToken(openAPIPrincipal,sign);
 
         //进行认证
         Authentication authenticate = authenticationManager.authenticate(openAPIAuthenticationToken);
