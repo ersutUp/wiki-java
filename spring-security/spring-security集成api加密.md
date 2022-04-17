@@ -28,7 +28,7 @@
       2. header：\_appId=xxx，\_timestamp=12345678，\_sign=a5352e2105915492013e2b93484c218a
 
 
-[postman加密脚本](./postman-pre.js)
+[postman加密脚本](./file/postman-pre.js)
 
 postman:https://documenter.getpostman.com/view/8144021/Uyr4LLdR
 
