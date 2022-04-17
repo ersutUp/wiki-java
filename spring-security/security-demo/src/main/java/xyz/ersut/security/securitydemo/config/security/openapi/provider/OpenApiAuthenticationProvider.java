@@ -3,12 +3,11 @@ package xyz.ersut.security.securitydemo.config.security.openapi.provider;
 import cn.hutool.crypto.digest.DigestUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationProvider;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
-import org.springframework.util.ObjectUtils;
-import xyz.ersut.security.securitydemo.SecurityDemoApplication;
 import xyz.ersut.security.securitydemo.config.security.openapi.OpenAPIUser;
 import xyz.ersut.security.securitydemo.config.security.openapi.filter.OpenAPIFilter;
 import xyz.ersut.security.securitydemo.config.security.openapi.token.OpenAPIAuthenticationToken;
@@ -17,7 +16,6 @@ import xyz.ersut.security.securitydemo.pojo.entity.Application;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 
 @Slf4j
 public class OpenApiAuthenticationProvider implements AuthenticationProvider {
@@ -46,13 +44,14 @@ public class OpenApiAuthenticationProvider implements AuthenticationProvider {
         }
         if(!requestSign.equalsIgnoreCase(generateSign)){
             log.info("签名校验失败，请求中的签名为：[{}]，生成的签名为：[{}]",requestSign,generateSign);
-            //todo 验证失败抛出认证失败异常
+            //验证失败抛出认证失败异常
+            throw new BadCredentialsException("签名错误");
         }
 
         //组建 OpenAPIUser
         OpenAPIUser openAPIUser = OpenAPIUser.builder().application(application).openAPIPrincipal(openAPIPrincipal).build();
 
-        //获取权限
+        //获取权限(这一部分不写了 与jwt的权限逻辑类似)
 //        openAPIUser.setPermissions();
 
         return new OpenAPIAuthenticationToken(openAPIUser,(String) authentication.getCredentials(),openAPIUser.getGrantedAuthorityList());

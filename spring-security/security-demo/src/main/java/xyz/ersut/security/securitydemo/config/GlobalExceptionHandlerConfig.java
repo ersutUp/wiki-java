@@ -2,25 +2,28 @@ package xyz.ersut.security.securitydemo.config;
 
 import lombok.extern.slf4j.Slf4j;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.AuthenticationEntryPoint;
+import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.util.ObjectUtils;
 import org.springframework.validation.BindException;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
-import xyz.ersut.security.securitydemo.config.security.jwt.LoginUser;
 import xyz.ersut.security.securitydemo.exception.code.CodeException;
-import xyz.ersut.security.securitydemo.exception.login.LoginException;
+
 import xyz.ersut.security.securitydemo.utils.result.ResultJson;
 import xyz.ersut.security.securitydemo.utils.result.code.ResultSystemCode;
 import xyz.ersut.security.securitydemo.utils.result.code.Resultcode;
 
+import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import java.util.List;
 
 /**
@@ -32,37 +35,21 @@ import java.util.List;
 @RestControllerAdvice
 public class GlobalExceptionHandlerConfig {
 
+    @Autowired
+    private AuthenticationEntryPoint authenticationEntryPoint;
+    @Autowired
+    private AccessDeniedHandler accessDeniedHandler;
 
     /*spring security*/
-    @ExceptionHandler(value = LoginException.class)
-    @ResponseStatus(HttpStatus.UNAUTHORIZED)
-    public ResultJson loginExceptionHandler(HttpServletRequest request, LoginException loginException){
-        log.info("认证失败,errMsg[{}]",loginException.getMessage());
-        return new ResultJson(ResultSystemCode.AUTH_ERROR,loginException.getMessage());
-    }
     @ExceptionHandler(value = AccessDeniedException.class)
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
-    public ResultJson accessDeniedHandler(HttpServletRequest request, AccessDeniedException accessDeniedException){
-        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        if(principal instanceof LoginUser) {
-            LoginUser loginUser = (LoginUser) principal;
-            log.info("security 权限不足,errMsg[{}],url：[{}],userId:[{}]", accessDeniedException.getMessage(), request.getRequestURI(), loginUser.getUser().getId());
-        } else {
-            log.info("security 权限不足,errMsg[{}],url：[{}]", accessDeniedException.getMessage(), request.getRequestURI());
-        }
-        return new ResultJson(ResultSystemCode.PERMISSIONS_ERROR,accessDeniedException.getMessage());
+    public void accessDeniedHandler(HttpServletRequest request, HttpServletResponse response, AccessDeniedException accessDeniedException) throws ServletException, IOException {
+        accessDeniedHandler.handle(request,response,accessDeniedException);
     }
     @ExceptionHandler(value = AuthenticationException.class)
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
-    public ResultJson authenticationExceptionHandler(HttpServletRequest request, AuthenticationException authenticationException){
-        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        if(principal instanceof LoginUser){
-            LoginUser loginUser = (LoginUser)principal;
-            log.info("security 认证失败,errMsg[{}],url：[{}],userId:[{}]",authenticationException.getMessage(),request.getRequestURI(),loginUser.getUser().getId());
-        } else {
-            log.info("security 认证失败,errMsg[{}],url：[{}],userId:[{}]",authenticationException.getMessage(),request.getRequestURI(),principal);
-        }
-        return new ResultJson(ResultSystemCode.AUTH_ERROR,authenticationException.getMessage());
+    public void authenticationExceptionHandler(HttpServletRequest request, HttpServletResponse response, AuthenticationException authenticationException) throws ServletException, IOException {
+        authenticationEntryPoint.commence(request,response,authenticationException);
     }
 
 
@@ -127,6 +114,7 @@ public class GlobalExceptionHandlerConfig {
      * @return
      */
     @ExceptionHandler(value = {Exception.class})
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public Object defaultErrorHandler(HttpServletRequest request, HttpServletResponse response, Exception e) {
         log.error("system error",e);
         return new ResultJson(ResultSystemCode.ERROR);

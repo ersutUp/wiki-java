@@ -1,5 +1,6 @@
 package xyz.ersut.security.securitydemo.config.security.jwt;
 
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -15,7 +16,7 @@ public class MyUserDetailsService implements UserDetailsService {
         //查询用户
         User user = SecurityDemoApplication.userByUsername.get(username);
         if(ObjectUtils.isEmpty(user)){
-            throw new RuntimeException("用户不存在");
+            throw new UsernameNotFoundException("用户不存在");
         }
 
         //查询权限

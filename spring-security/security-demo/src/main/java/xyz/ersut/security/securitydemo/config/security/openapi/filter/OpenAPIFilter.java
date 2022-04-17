@@ -10,9 +10,11 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.stereotype.Component;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
@@ -51,6 +53,9 @@ public class OpenAPIFilter extends OncePerRequestFilter {
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Autowired
+    private AuthenticationEntryPoint authenticationEntryPoint;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
@@ -142,15 +147,23 @@ public class OpenAPIFilter extends OncePerRequestFilter {
         //封装 LoginUser 放入 SecurityContextHolder
         Authentication openAPIAuthenticationToken = new OpenAPIAuthenticationToken(openAPIPrincipal,sign);
 
-        //进行认证
-        Authentication authenticate = authenticationManager.authenticate(openAPIAuthenticationToken);
+        Authentication authenticate = null;
+        try{
+            //进行认证
+            authenticate = authenticationManager.authenticate(openAPIAuthenticationToken);
+        } catch (BadCredentialsException e){
+            if(log.isDebugEnabled()){
+                log.debug("认证失败：["+e.getMessage()+"]",e);
+            }
+            authenticationEntryPoint.commence(request,response,e);
+            return;
+        }
 
         //判断认证是否成功
         if(authenticate != null){
             //放入 SecurityContextHolder
             SecurityContextHolder.getContext().setAuthentication(authenticate);
         }
-
 
         filterChain.doFilter(request,response);
 
