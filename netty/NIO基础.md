@@ -43,7 +43,7 @@ b-->c
 #### 多线程版本
 
 ```mermaid
-graph TB
+graph TD
 subgraph 多线程 
     thread1-->socket1
     thread2-->socket2
@@ -61,7 +61,7 @@ end
 #### 线程池版本
 
 ```mermaid
-graph TB
+graph TD
 subgraph 线程池
 t1(thread1) --> socket1
 t1 -.-> socket3
@@ -84,7 +84,7 @@ selector的作用是配合一个线程中管理多个channel，channel工作在�
 **适合连接数少，流量低的场景**
 
 ```mermaid
-graph TB
+graph TD
 subgraph selector
 thread-->s1(selector)
 s1-->channel1
