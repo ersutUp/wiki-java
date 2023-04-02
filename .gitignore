@@ -3,7 +3,7 @@
 待验证/boot-ServletComponentScan/.idea/
 spring/spring5-helloWorld/.idea/
 spring/spring-framework-demo/.idea/
-java/java-demo/.idea/
+**/.idea/
 java/**/target/**
 spring/**/target/**
 待验证/**/target/**
