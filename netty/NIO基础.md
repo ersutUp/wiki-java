@@ -103,19 +103,121 @@ end
 
 #### 2.1.1 读数据
 
+```java
+public void testRead(){
+    try (RandomAccessFile file = new RandomAccessFile("abc.txt", "rw")) {
+        FileChannel channel = file.getChannel();
+        //创建一个 大小为11 的ByteBuffer
+        ByteBuffer byteBuffer = ByteBuffer.allocate(10);
+        while (true) {
+            //从通道中读取数据到ByteBuffer，每次读取的数据是ByteBuffer的大小
+            int len = channel.read(byteBuffer);
+            //len表示读取了多少数据，0表示数据已全部读取
+            if (len <= 0) {
+                break;
+            }
+            //切换为读模式
+            byteBuffer.flip();
+            for (int i = 0; i < len; i++) {
+                System.out.println((char) byteBuffer.get());
+            }
+            //切换为写模式
+            byteBuffer.clear();
+        }
+    } catch (IOException ioException) {
+    }
+}
+```
 
+`abc.txt`文件内容
+
+```tex
+134567890abcdef
+```
+
+代码输出内容
+
+```tex
+1
+3
+4
+5
+6
+7
+8
+9
+0
+a
+b
+c
+d
+e
+f
+
+```
+
+[读数据示例](./netty_demo/src/main/test/top/ersut/ByteBufferDemoTest.java)
 
 #### 2.1.2 写数据
 
+```java
+public void testWrite(){
+    try (RandomAccessFile file = new RandomAccessFile("write.txt", "rw")) {
+        FileChannel channel = file.getChannel();
 
+        //创建ByteBuffer
+        ByteBuffer byteBuffer = ByteBuffer.allocate(4);
+        //往ByteBuffer中写入数据
+        byteBuffer.put("test".getBytes());
+        //切换为读模式
+        byteBuffer.flip();
+
+        //通过channel将ByteBuffer写入到文件中
+        channel.write(byteBuffer);
+    } catch (IOException ioException) {
+    }
+}
+```
+
+`write.txt`文件内没有内容，代码运行后内容如下：
+
+```tex
+test
+```
+
+[写数据示例](./netty_demo/src/main/test/top/ersut/ByteBufferDemoTest.java)
 
 ### 2.2 ByteBuffer的结构
+
+**三个重要属性：**
 
 * capacity：ByteBuffer的容量
 * position：ByteBuffer的指针
 * limit：ByteBuffer的读写限制
 
+1、运行`ByteBuffer.allocate(10)`，创建了一个容量为10的ByteBuffer，三个重要属性如下：
 
+![](./images/byteBuffer001.png)
+
+2、写模式下（新建的`ByteBuffer`默认为写模式，当`clear()` 或者`compact()`动作发生时切换为写模式），`position`是待写入位置；`limit`和`capacity`相等，下图写入了4个字节后的状态：
+
+![](./images/byteBuffer002.png)
+
+3、读模式下，`position`是待读取位置，指向最前方的位置；`limit`是当前字节的个数（读取限制）；状态如下：
+
+![](./images/byteBuffer003.png)
+
+4、读取2个字节的状态：
+
+![](./images/byteBuffer004.png)
+
+5、切换为写模式，情况1：执行`clear()`动作，状态如下：
+
+![](./images/byteBuffer005.png)
+
+6、切换为写模式，情况2：执行`compact()`动作，把未读取的数据向前压缩，状态如下：
+
+![](./images/byteBuffer006.png)
 
 
 

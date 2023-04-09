@@ -11,7 +11,8 @@ public class ByteBufferDemoTest {
 
 
     @Test
-    public void TestRead(){
+    //测试读取
+    public void testRead(){
         try (RandomAccessFile file = new RandomAccessFile("abc.txt", "rw")) {
             FileChannel channel = file.getChannel();
             //创建一个 大小为11 的ByteBuffer
@@ -31,12 +32,12 @@ public class ByteBufferDemoTest {
                 //切换为写模式
                 byteBuffer.clear();
             }
-
         } catch (IOException ioException) {
         }
     }
     @Test
-    public void TestWrite(){
+    //测试写入
+    public void testWrite(){
         try (RandomAccessFile file = new RandomAccessFile("write.txt", "rw")) {
             FileChannel channel = file.getChannel();
 

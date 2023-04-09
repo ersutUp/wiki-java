@@ -7,3 +7,4 @@ spring/spring-framework-demo/.idea/
 java/**/target/**
 spring/**/target/**
 待验证/**/target/**
+*.class
