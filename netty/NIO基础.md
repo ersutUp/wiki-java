@@ -211,15 +211,19 @@ test
 
 ![](./images/byteBuffer004.png)
 
-5、切换为写模式，情况1：执行`clear()`动作，状态如下：
+5、切换为写模式，
+
+​		5.1、情况1：执行`clear()`动作，状态如下：
 
 ![](./images/byteBuffer005.png)
 
-6、切换为写模式，情况2：执行`compact()`动作，把未读取的数据向前压缩，状态如下：
+​		[clear示例#testStructureClear](./netty_demo/src/main/test/top/ersut/ByteBufferDemoTest.java)
+
+​		5.2、情况2：执行`compact()`动作，把未读取的数据向前压缩，状态如下：
 
 ![](./images/byteBuffer006.png)
 
-
+​		[compact示例#testStructureCompact](./netty_demo/src/main/test/top/ersut/ByteBufferDemoTest.java)
 
 ### 2.3 ❤常用方法和示例
 

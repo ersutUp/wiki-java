@@ -1,6 +1,7 @@
 package top.ersut;
 
 import org.junit.Test;
+import top.ersut.utils.ByteBufferUtil;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -53,6 +54,52 @@ public class ByteBufferDemoTest {
         } catch (IOException ioException) {
         }
     }
+
+
+    public ByteBuffer structure(){
+        //1、创建ByteBuffer
+        ByteBuffer byteBuffer = ByteBuffer.allocate(10);
+        ByteBufferUtil.debugAll(byteBuffer);
+        //2、往ByteBuffer中写入4个字节
+        byteBuffer.put("abcd".getBytes());
+        ByteBufferUtil.debugAll(byteBuffer);
+        //3、切换为读模式
+        byteBuffer.flip();
+        ByteBufferUtil.debugAll(byteBuffer);
+
+        //4、读取两个字节
+        System.out.println((char)byteBuffer.get());
+        System.out.println((char)byteBuffer.get());
+        ByteBufferUtil.debugAll(byteBuffer);
+
+        return byteBuffer;
+    }
+
+    /**
+     * ByteBuffer结构示例：clear情况
+     */
+    @Test
+    public void testStructureClear(){
+        ByteBuffer byteBuffer = structure();
+
+        //5、切换为写模式，情况1：执行clear()动作
+        byteBuffer.clear();
+        ByteBufferUtil.debugAll(byteBuffer);
+
+    }
+
+    /**
+     * ByteBuffer结构示例：compact情况
+     */
+    @Test
+    public void testStructureCompact() {
+        ByteBuffer byteBuffer = structure();
+
+        //5、切换为写模式，情况2：执行compact()动作，把未读取的数据向前压缩
+        byteBuffer.compact();
+        ByteBufferUtil.debugAll(byteBuffer);
+    }
+
 
 
 
