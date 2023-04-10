@@ -286,7 +286,6 @@ position: [3], limit: [16]
 +--------+-------------------------------------------------+----------------+
 </code></pre>
 </details>
-
 [put示例源码#testPut](./netty_demo/src/main/test/top/ersut/ByteBufferDemoTest.java)
 
 ##### clear方法：清除数据
@@ -507,3 +506,5 @@ position: [0], limit: [16]
 +--------+-------------------------------------------------+----------------+
     </code></pre>
 </details>
+
+[粘包、拆包示例源码#testStickingAndUnpacking](./netty_demo/src/main/test/top/ersut/ByteBufferDemoTest.java)
