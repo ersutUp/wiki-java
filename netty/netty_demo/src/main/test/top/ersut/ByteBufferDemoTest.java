@@ -233,8 +233,59 @@ public class ByteBufferDemoTest {
     }
 
 
+    /**
+     * 切换读模式
+     */
+    @Test
+    public void testFlip(){
+        ByteBuffer byteBuffer = ByteBuffer.allocate(16);
+        //写入多个字节
+        byteBuffer.put("abcde".getBytes());
+        ByteBufferUtil.debugAll(byteBuffer);
+        //切换为读模式
+        byteBuffer.flip();
+        System.out.println("↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓flip↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓");
+        ByteBufferUtil.debugAll(byteBuffer);
 
+        //读取全部数据
+        int limit = byteBuffer.limit();
+        for (int i = 0; i < limit; i++) {
+            System.out.println(byteBuffer.get());
+        }
 
+        System.out.println("↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓get↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓");
+        ByteBufferUtil.debugAll(byteBuffer);
+    }
+
+    /**
+     * 读取值
+     */
+    @Test
+    public void testGet(){
+        ByteBuffer byteBuffer = ByteBuffer.allocate(16);
+        //写入多个字节
+        byteBuffer.put("abcde".getBytes());
+        //切换为读模式
+        byteBuffer.flip();
+        System.out.println("↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓flip↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓");
+        ByteBufferUtil.debugAll(byteBuffer);
+
+        //读取限制
+        int limit = byteBuffer.limit();
+        //通过索引读取，position值不变更
+        for (int i = 0; i < limit; i=i+2) {
+            System.out.println(byteBuffer.get(i));
+        }
+        System.out.println("↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓get(index)↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓");
+        ByteBufferUtil.debugAll(byteBuffer);
+
+        //使用position作为索引读取，position变更
+        for (int i = 0; i < limit; i++) {
+            System.out.println(byteBuffer.get());
+        }
+        System.out.println("↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓get()↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓");
+        ByteBufferUtil.debugAll(byteBuffer);
+    }
 
 
 }
