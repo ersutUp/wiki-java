@@ -563,11 +563,110 @@ position: [5], limit: [5]
 
 #### 2.3.3 标记位置：make 和 reset方法
 
+**不建议使用！！！！！**
 
+make方法：标记当前`position`的值
+
+reset方法：将`make()`记录的值恢复到`position`
+
+[make、reset示例源码#testMakeAndReset](./netty_demo/src/main/test/top/ersut/ByteBufferDemoTest.java)
+
+##### 不建议使用原因
+
+reset方法在执行的时候，如果会判断是否标记，没有标记会抛出异常，而这个异常无法提前预知。
+
+异常代码示例：
+
+```java
+public void testResetException(){
+    ByteBuffer byteBuffer = ByteBuffer.allocate(16);
+    //写入多个字节
+    byteBuffer.put("abcde".getBytes());
+    //切换为读模式
+    byteBuffer.flip();
+
+    System.out.println(byteBuffer.get());
+    System.out.println(byteBuffer.get());
+    byteBuffer.mark();
+    System.out.println("↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓get()2↓↓↓make()↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓");
+    ByteBufferUtil.debugAll(byteBuffer);
+
+    //position方法，当make值比 po
+    byteBuffer.position(1);
+    System.out.println("↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓position↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓");
+    ByteBufferUtil.debugAll(byteBuffer);
+
+    System.out.println(byteBuffer.get());
+
+    //发生异常，而且异常不可预知，只能try catch
+    byteBuffer.reset();
+}
+```
+
+最后一行`byteBuffer.reset();`会抛出异常
+
+明明执行了`make()`为什么还抛出异常？
+
+异常的原因：
+
+先看`make() reset() position()`源码
+
+```java
+//标记变量
+private int mark = -1;
+public final Buffer mark() {
+    //make变量记录下当前的position，即标记
+    mark = position;
+    return this;
+}
+public final Buffer position(int newPosition) {
+    position = newPosition;
+    //若make 大于 新指定的position 则make置为-1，也就是取消标记
+    if (mark > position) mark = -1;
+    return this;
+}
+public final Buffer reset() {
+    int m = mark;
+    //判断make是否在小于0，小于0则不存在抛出异常
+    if (m < 0)
+        throw new InvalidMarkException();
+    //make存在 赋值给 position
+    position = m;
+    return this;
+}
+```
+
+那么执行`make()`后再执行` position(int newPosition)`，如果`make`变量小于`newPosition`变量，`make`会被赋值为-1，接下来在执行`reset`会报错，结合上边的异常代码示例可以理解的更彻透。
+
+[异常代码示例源码#testResetException](./netty_demo/src/main/test/top/ersut/ByteBufferDemoTest.java)
 
 #### 2.3.4 字符串与 ByteBuffer 互转
 
+```java
+public void testString2ByteBuffer(){
+    //字符串转ByteBuffer 方法1
+    ByteBuffer byteBuffer = ByteBuffer.allocate(16);
+    byteBuffer.put("abcde".getBytes());
+    //读模式
+    byteBuffer.flip();
 
+    //字符串转ByteBuffer  方法2：已经为读模式
+    ByteBuffer byteBuffer1 = StandardCharsets.UTF_8.encode("12345");
+
+    //字符串转ByteBuffer  方法3：已经为读模式
+    ByteBuffer byteBuffer2 = ByteBuffer.wrap("abcde".getBytes());
+
+    //ByteBuffer转字符串
+    CharBuffer decode = StandardCharsets.UTF_8.decode(byteBuffer);
+    System.out.println(decode);
+    System.out.println(StandardCharsets.UTF_8.decode(byteBuffer1));
+    System.out.println(StandardCharsets.UTF_8.decode(byteBuffer2));
+}
+```
+
+**本质上是byte数组与char数组的互转**
+
+[互转代码示例源码#testString2ByteBuffer](./netty_demo/src/main/test/top/ersut/ByteBufferDemoTest.java)
 
 ### 2.4 应用实例
 

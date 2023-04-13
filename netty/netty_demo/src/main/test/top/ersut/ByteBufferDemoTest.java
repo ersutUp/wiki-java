@@ -7,7 +7,9 @@ import top.ersut.utils.ByteBufferUtil;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -286,6 +288,92 @@ public class ByteBufferDemoTest {
         System.out.println("↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓get()↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓");
         ByteBufferUtil.debugAll(byteBuffer);
     }
+
+    /**
+     * make和reset的使用
+     */
+    @Test
+    public void testMakeAndReset(){
+        ByteBuffer byteBuffer = ByteBuffer.allocate(16);
+        //写入多个字节
+        byteBuffer.put("abcde".getBytes());
+        //切换为读模式
+        byteBuffer.flip();
+
+        System.out.println(byteBuffer.get());
+        System.out.println(byteBuffer.get());
+        byteBuffer.mark();
+        System.out.println("↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓get()2↓↓↓make()↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓");
+        ByteBufferUtil.debugAll(byteBuffer);
+
+        System.out.println(byteBuffer.get());
+        System.out.println(byteBuffer.get());
+        System.out.println("↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓get()4↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓");
+        ByteBufferUtil.debugAll(byteBuffer);
+
+        byteBuffer.reset();
+        System.out.println("↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓reset()↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓");
+        ByteBufferUtil.debugAll(byteBuffer);
+
+        System.out.println(byteBuffer.get());
+        System.out.println(byteBuffer.get());
+        System.out.println(byteBuffer.get());
+
+        System.out.println("↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓get()5↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓");
+        ByteBufferUtil.debugAll(byteBuffer);
+    }
+
+    /**
+     * reset() 的一些坑
+     */
+    @Test
+    public void testResetException(){
+        ByteBuffer byteBuffer = ByteBuffer.allocate(16);
+        //写入多个字节
+        byteBuffer.put("abcde".getBytes());
+        //切换为读模式
+        byteBuffer.flip();
+
+        System.out.println(byteBuffer.get());
+        System.out.println(byteBuffer.get());
+        byteBuffer.mark();
+        System.out.println("↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓get()2↓↓↓make()↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓");
+        ByteBufferUtil.debugAll(byteBuffer);
+
+        //position方法，当make值比 po
+        byteBuffer.position(1);
+        System.out.println("↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓position↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓");
+        ByteBufferUtil.debugAll(byteBuffer);
+
+        System.out.println(byteBuffer.get());
+
+        //发生异常，而且异常不可预知，只能try catch
+        byteBuffer.reset();
+    }
+
+    @Test
+    public void testString2ByteBuffer(){
+        //字符串转ByteBuffer 方法1
+        ByteBuffer byteBuffer = ByteBuffer.allocate(16);
+        byteBuffer.put("abcde".getBytes());
+        //读模式
+        byteBuffer.flip();
+
+        //字符串转ByteBuffer  方法2：已经为读模式
+        ByteBuffer byteBuffer1 = StandardCharsets.UTF_8.encode("12345");
+
+        //字符串转ByteBuffer  方法3：已经为读模式
+        ByteBuffer byteBuffer2 = ByteBuffer.wrap("abcde".getBytes());
+
+        //ByteBuffer转字符串
+        CharBuffer decode = StandardCharsets.UTF_8.decode(byteBuffer);
+        System.out.println(decode);
+        System.out.println(StandardCharsets.UTF_8.decode(byteBuffer1));
+        System.out.println(StandardCharsets.UTF_8.decode(byteBuffer2));
+
+    }
+
+
 
 
 }
