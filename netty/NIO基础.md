@@ -796,7 +796,226 @@ position: [0], limit: [16]
 
 > FileChannel 只能工作在阻塞模式下，具体原因：操作系统的限制
 
+#### 3.1.1 获取FileChannel
 
+可以通过`FileOutputStream`、`FileInputStream`、`RandomAccessFile`的`getChannel`方法获取`FileChannel`。
 
+- `FileOutputStream`：只可以写入文件（只写模式）
+- `FileInputStream`：只可以读取文件（只读模式）
+- `RandomAccessFile`：通过实例化时的`mode`参数决定文件的访问权限
+  - mode为r时可以读取
+  - mode为w时可以写入
+  - mode为rw时可以写入和读取
 
+```java
+try (FileOutputStream fileOutputStream = new FileOutputStream("fileChannel.txt")){
+    //获取通道
+    FileChannel fileChannel = fileOutputStream.getChannel();
+}
+
+try (FileInputStream fileInputStream = new FileInputStream("fileChannel.txt")){
+    //获取通道
+    FileChannel fileChannel = fileInputStream.getChannel();
+}
+```
+
+[示例代码#getFileChannelTest](./netty_demo/src/main/test/top/ersut/FileChannelTest.java)
+
+```java
+try (RandomAccessFile randomAccessFile = new RandomAccessFile("randomAccessFile.txt","rw")){
+    FileChannel fileChannel = randomAccessFile.getChannel();
+}
+```
+
+[示例代码#randomAccessFileTest](./netty_demo/src/main/test/top/ersut/FileChannelTest.java)
+
+#### 3.1.2 写入文件
+
+```java
+//字符串转换ByteBuffer
+ByteBuffer byteBuffer = StandardCharsets.UTF_8.encode(writeStr);
+
+//FileChannel.write 无法保证一次性写入所有字节，所以要循环引用直到 ByteBuffer 中没有了字节
+while (byteBuffer.hasRemaining()){
+    fileChannel.write(byteBuffer);
+}
+```
+
+**FileChannel.write 无法保证一次性写入所有字节，所以要循环引用直到 ByteBuffer 中没有了字节**
+
+[示例代码#getFileChannelTest](./netty_demo/src/main/test/top/ersut/FileChannelTest.java)
+
+#### 3.1.3 读取文件
+
+```java
+ByteBuffer byteBuffer = ByteBuffer.allocate(10);
+//获取文件内容
+fileChannel.read(byteBuffer);
+```
+
+[示例代码#getFileChannelTest](./netty_demo/src/main/test/top/ersut/FileChannelTest.java)
+
+#### 3.1.4 通过FileChannel拷贝文件
+
+```java
+try(
+        FileInputStream from = new FileInputStream("fileChannel.txt");
+        FileOutputStream to = new FileOutputStream("fileChannel_copy.txt");
+){
+    FileChannel fromChannel = from.getChannel();
+    FileChannel toChannel = to.getChannel();
+    //单次拷贝只有2GB，超出2GB部分不会进行拷贝
+    fromChannel.transferTo(0,fromChannel.size(),toChannel);
+}
+```
+
+**注意：`FileChannel.transferTo`方法单次拷贝只有2GB，超出2GB部分不会进行拷贝**
+
+[示例代码#fileChannelCopyTest](./netty_demo/src/main/test/top/ersut/FileChannelTest.java)
+
+### 3.2 Files
+
+#### 3.2.1 拷贝文件
+
+```java
+
+Path from = Paths.get("fileChannel.txt");
+Path to = Paths.get("fileChannel_copy1.txt");
+try {
+    //该方式拷贝不限制文件的大小，目标文件存在会报错
+    Files.copy(from,to);
+}
+```
+
+该方式拷贝不限制文件的大小，**但是目标文件存在会报错**
+
+可以通过`StandardCopyOption.REPLACE_EXISTING`，将目标文件覆盖
+
+```java
+try {
+    //StandardCopyOption.REPLACE_EXISTING 代表如果目标文件存在进行覆盖操作
+    Files.copy(from,to,StandardCopyOption.REPLACE_EXISTING);
+}
+```
+
+[示例代码#filesCopyTest](./netty_demo/src/main/test/top/ersut/FileChannelTest.java)
+
+#### 3.2.2 移动文件
+
+```java
+Path source = Paths.get("fileChannel_copy1.txt");
+Path targer = Paths.get("fileChannel_copy2.txt");
+try {
+    //StandardCopyOption.ATOMIC_MOVE 代表移动文件，并保证文件的原子性,同时可进行重命名
+    Files.move(source,targer,StandardCopyOption.ATOMIC_MOVE);
+}
+```
+
+**`StandardCopyOption.ATOMIC_MOVE`代表移动文件，并保证文件的原子性,同时可进行重命名**
+
+[示例代码#filesMoveTest](./netty_demo/src/main/test/top/ersut/FileChannelTest.java)
+
+#### 3.2.3 删除文件/目录
+
+删除文件：
+
+```java
+Path path = Paths.get("fileChannel_copy1.txt");
+try {
+    //删除文件
+    Files.delete(path);
+}
+```
+
+删除目录：
+
+```java
+try {
+    String deleteDirName = "deleteDir";
+    Path dir = Paths.get(deleteDirName);
+
+    //删除目录，注意当目录下有文件，删除目录会报异常
+    Files.delete(dir);
+}
+```
+
+**注意当目录下有文件，删除目录会报异常**
+
+[示例代码#filesDeleteTest](./netty_demo/src/main/test/top/ersut/FileChannelTest.java)
+
+#### 3.2.4 遍历目录
+
+```java
+String deleteDirName = "deleteDir3";
+Path dir = Paths.get(deleteDirName);
+
+final StringBuilder tab = new StringBuilder();
+Files.walkFileTree(dir,new SimpleFileVisitor<Path>(){
+    //目录的前置回调
+    @Override
+    public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
+        tab.append(" ");
+        System.out.println(tab+dir.getFileName().toString());
+        return super.preVisitDirectory(dir, attrs);
+    }
+
+    //文件的回调
+    @Override
+    public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+        System.out.println(tab+" |- "+file.getFileName());
+        return super.visitFile(file,attrs);
+    }
+});
+```
+
+<details><summary>展开查看运行结果</summary><pre><code> deleteDir3
+  |- 1.txt
+  |- 2.txt
+  |- 3.txt
+  children
+   |- c1.txt
+</code></pre>
+</details>
+
+`Files.walkFileTree`方法是遍历文件树
+
+`SimpleFileVisitor`类：文件树的实时回调
+
+- `preVisitDirectory`方法：目录的前置回调
+- `visitFile`方法：目录中文件的回调
+- `visitFileFailed`方法： 文件访问失败的回调
+- `postVisitDirectory`方法：目录的后置回调
+
+#### 3.2.5 删除带文件目录
+
+```java
+String deleteDirName = "deleteDir2";
+Path dir = Paths.get(deleteDirName);
+
+//删除带文件的目录
+try {
+    //遍历文件树
+    //SimpleFileVisitor 文件树的实时回调
+    Files.walkFileTree(dir,new SimpleFileVisitor<Path>(){
+
+        //文件的回调
+        @Override
+        public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+            Files.delete(file);
+            return super.visitFile(file,attrs);
+        }
+
+        //对目录的后置回调
+        @Override
+        public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
+            Files.delete(dir);
+            return super.postVisitDirectory(dir,exc);
+        }
+    });
+}
+```
+
+##### ⚠️ 删除很危险
+
+> 删除是危险操作，确保要递归删除的文件夹没有重要内容
 
