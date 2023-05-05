@@ -29,6 +29,21 @@
       <artifactId>netty-all</artifactId>
       <version>4.1.39.Final</version>
     </dependency>
+
+    <!-- log -->
+    <dependency>
+      <groupId>ch.qos.logback</groupId>
+      <artifactId>logback-classic</artifactId>
+      <version>1.2.3</version>
+    </dependency>
+
+    <!-- lombak -->
+    <dependency>
+      <groupId>org.projectlombok</groupId>
+      <artifactId>lombok</artifactId>
+      <version>1.16.18</version>
+    </dependency>
+
   </dependencies>
 
   <build>

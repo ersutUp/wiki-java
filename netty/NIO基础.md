@@ -1019,3 +1019,163 @@ try {
 
 > 删除是危险操作，确保要递归删除的文件夹没有重要内容
 
+## 4. 网络编程
+
+### 4.1 阻塞模式 vs 非阻塞模式
+
+#### 4.1.1 测试的客户端
+
+1. 打开客户端
+
+   ```java
+   SocketChannel client = SocketChannel.open();
+   ```
+
+2. 连接服务端
+
+   ```java
+   client.connect(new InetSocketAddress("127.0.0.1",6666));
+   ```
+
+3. 发送消息
+
+   ```java
+   client.write(StandardCharsets.UTF_8.encode("hello!"))
+   ```
+
+[示例代码#socketChannelTest](./netty_demo/src/main/test/top/ersut/SocketChannelTest.java)：
+
+```java
+public void socketChannelTest() throws IOException, InterruptedException {
+    //打开客户端
+    SocketChannel client1 = SocketChannel.open();
+    //连接服务端
+    client1.connect(new InetSocketAddress("127.0.0.1",6666));
+    //发送消息
+    client1.write(StandardCharsets.UTF_8.encode("hello!"));
+    Thread.sleep(3*1000);
+    client1.write(StandardCharsets.UTF_8.encode("hello2!"));
+
+    SocketChannel client2 = SocketChannel.open();
+    client2.connect(new InetSocketAddress("127.0.0.1",6666));
+    client2.write(StandardCharsets.UTF_8.encode("hi!"));
+    Thread.sleep(3*1000);
+    client2.write(StandardCharsets.UTF_8.encode("hi2!"));
+    Thread.sleep(10*1000);
+}
+```
+
+#### 4.1.2 阻塞的服务端
+
+##### 4.1.2.1 创建服务端
+
+1. 打开服务端
+
+   ```java
+   ServerSocketChannel serverSocketChannel = ServerSocketChannel.open();
+   ```
+
+2. 绑定端口
+
+   ```java
+   serverSocketChannel.bind(new InetSocketAddress(6666));
+   ```
+
+3. 等待客户端
+
+   ```java
+   SocketChannel socketChannel = serverSocketChannel.accept();
+   ```
+
+   `accept()`方法会阻塞线程，等待新客户端的连接
+
+4. 接收客户端的消息
+
+   ```java
+   ByteBuffer byteBuffer = ByteBuffer.allocate(16);
+   socketChannel.read(byteBuffer);
+   ```
+
+   `read(byteBuffer)`方法会阻塞线程直到接收到新消息
+
+[示例代码#serverSocketChannelBlockingTest](./netty_demo/src/main/test/top/ersut/SocketChannelTest.java)：
+
+```java
+public void serverSocketChannelBlockingTest() throws IOException {
+
+    //1、打开服务端
+    ServerSocketChannel serverSocketChannel = ServerSocketChannel.open();
+
+    //2、绑定端口
+    serverSocketChannel.bind(new InetSocketAddress(6666));
+    log.debug("serverSocketChannel start...");
+
+    //用来存放连接的客户端
+    List<SocketChannel> clientSocketChannels = new ArrayList<>();
+
+    while (true) {
+        //3、与客户端建立连接。并返回一个 SocketChannel 用来与客户端通信；accept()会阻塞
+        SocketChannel socketChannel = serverSocketChannel.accept();
+        log.debug("remotePort:[{}],connected...",((InetSocketAddress)socketChannel.getRemoteAddress()).getPort());
+        //新来的客户端放入客户端列表
+        clientSocketChannels.add(socketChannel);
+        //遍历客户端列表，接收客户端消息
+        for (SocketChannel clientSocketChannel : clientSocketChannels) {
+            int port = ((InetSocketAddress) clientSocketChannel.getRemoteAddress()).getPort();
+            ByteBuffer byteBuffer = ByteBuffer.allocate(16);
+            //4、获取客户端发来的消息，此处也会阻塞
+            clientSocketChannel.read(byteBuffer);
+            log.debug("remotePort:[{}],read...", port);
+            byteBuffer.flip();
+
+            CharBuffer charBuffer = StandardCharsets.UTF_8.decode(byteBuffer);
+            log.debug("remotePort:[{}],message:[{}]", port,charBuffer);
+
+            //清除,准备接收下一次消息
+            byteBuffer.clear();
+        }
+    }
+}
+```
+
+客户端连接后运行结果：
+
+```txt
+23:28:24.655 [main] DEBUG top.ersut.SocketChannelTest - serverSocketChannel start...
+23:28:31.044 [main] DEBUG top.ersut.SocketChannelTest - remotePort:[65009],connected...
+23:28:31.047 [main] DEBUG top.ersut.SocketChannelTest - remotePort:[65009],read...
+23:28:31.048 [main] DEBUG top.ersut.SocketChannelTest - remotePort:[65009],message:[hello!]
+23:28:34.047 [main] DEBUG top.ersut.SocketChannelTest - remotePort:[65014],connected...
+23:28:34.048 [main] DEBUG top.ersut.SocketChannelTest - remotePort:[65009],read...
+23:28:34.049 [main] DEBUG top.ersut.SocketChannelTest - remotePort:[65009],message:[hello2!]
+23:28:34.050 [main] DEBUG top.ersut.SocketChannelTest - remotePort:[65014],read...
+23:28:34.052 [main] DEBUG top.ersut.SocketChannelTest - remotePort:[65014],message:[hi!]
+```
+
+通过日志可以看到客户端发送的`hi2!`没有接收到。
+
+##### 4.1.2.2 分析客户端与阻塞服务端的代码
+
+1. 服务端阻塞在`accept()`方法；
+2. **客户端的`client1`（即日志中的`remotePort:[65009]`）连接服务端，`accept()`方法本次阻塞结束；**
+3. 服务端与`client1`的链接进行`clientSocketChannel.read(byteBuffer);`阻塞了；
+4. 客户端的`client1`发送"hello!"消息，`clientSocketChannel.read(byteBuffer);`结束阻塞并成功接收"hello!"消息；
+5. **客户端的`client1`发送"hello2!"消息；**
+6. 服务端进入下次while循环；
+7. 服务端循环第二次阻塞在了`accept()`方法；
+8. **客户端的`client2`（即日志中的`remotePort:[65014]`）连接服务端，`accept()`方法本次阻塞结束；**
+9. **服务端与`client1`的链接进行`clientSocketChannel.read(byteBuffer);`接收了"hello2!"消息；**
+10. 服务端与`client2`的链接进行`clientSocketChannel.read(byteBuffer);`阻塞了；
+11. 客户端的`client2`发送"hi!"消息，`clientSocketChannel.read(byteBuffer);`结束阻塞并成功接收"hi!"消息；
+12. **客户端的`client2`发送"hi2!"消息；**
+13. 服务端进入下次while循环；
+14. **服务端循环第三次阻塞在了`accept()`方法；由于没有第三个客户端进行连接所以无法执行到`clientSocketChannel.read(byteBuffer);`，也就无法接收`client2`发送的"hi2!"消息；**
+
+##### 4.1.2.3 ⚠️阻塞服务端的缺点
+
+1. **单线程下**，无法兼顾接收客户端消息和连接新客户端
+2. **多线程下**，32 位 jvm 一个线程 320k，64 位 jvm 一个线程 1024k，如果连接数过多会导致 OOM，并且线程太多，反而会因为cpu频繁切换线程导致性能降低
+3. 线程池方案下，可以减少线程数和线程切换次数，但是建立很多连接会导致阻塞后边的线程，这种方案适合短连接，不适合长连接，所以治表不治本。
+
+#### 4.1.2 非阻塞的服务端
+
