@@ -1067,7 +1067,7 @@ public void socketChannelTest() throws IOException, InterruptedException {
 
 #### 4.1.2 阻塞的服务端
 
-##### 4.1.2.1 创建服务端
+##### 4.1.2.1 创建阻塞的服务端
 
 1. 打开服务端
 
@@ -1138,7 +1138,7 @@ public void serverSocketChannelBlockingTest() throws IOException {
 }
 ```
 
-客户端连接后运行结果：
+与客户端连接后运行结果：
 
 ```txt
 23:28:24.655 [main] DEBUG top.ersut.SocketChannelTest - serverSocketChannel start...
@@ -1177,5 +1177,132 @@ public void serverSocketChannelBlockingTest() throws IOException {
 2. **多线程下**，32 位 jvm 一个线程 320k，64 位 jvm 一个线程 1024k，如果连接数过多会导致 OOM，并且线程太多，反而会因为cpu频繁切换线程导致性能降低
 3. 线程池方案下，可以减少线程数和线程切换次数，但是建立很多连接会导致阻塞后边的线程，这种方案适合短连接，不适合长连接，所以治表不治本。
 
-#### 4.1.2 非阻塞的服务端
+#### 4.1.3 非阻塞的服务端
+
+##### 4.1.3.1 创建非阻塞的客户端
+
+1. 打开服务端
+
+   ```java
+   ServerSocketChannel serverSocketChannel = ServerSocketChannel.open();
+   ```
+
+2. 绑定端口
+
+   ```java
+   serverSocketChannel.bind(new InetSocketAddress(6666));
+   ```
+
+3. **设置服务端为非阻塞模式**
+
+   ```java
+   serverSocketChannel.configureBlocking(false);
+   ```
+
+   默认是true，即阻塞模式
+
+4. 等待客户端
+
+   ```java
+   SocketChannel socketChannel = serverSocketChannel.accept();
+   ```
+
+   由于ServerSocketChannel配置了非阻塞模式，此处不会阻塞，没有新客户端时返回null
+
+5. **设置设置与客户端的连接为非阻塞模式**
+
+   ```java
+   socketChannel.configureBlocking(false);
+   ```
+
+   默认是true，即阻塞模式
+
+6. 接收客户端的消息
+
+   ```java
+   ByteBuffer byteBuffer = ByteBuffer.allocate(16);
+   socketChannel.read(byteBuffer);
+   ```
+
+   获取客户端发来的消息，由于SocketChannel设置了非阻塞此处不再阻塞，没有消息时byteBuffer中不存在有效数据
+
+[示例代码#serverSocketChannelNonBlockingTest](./netty_demo/src/main/test/top/ersut/SocketChannelTest.java)：
+
+```java
+//1、创建服务端
+ServerSocketChannel serverSocketChannel = ServerSocketChannel.open();
+
+//2、绑定端口
+serverSocketChannel.bind(new InetSocketAddress(6666));
+log.debug("serverSocketChannel start...");
+
+//3、设置服务端为非阻塞模式
+serverSocketChannel.configureBlocking(false);
+
+//用来存放连接的客户端
+List<SocketChannel> clientSocketChannels = new ArrayList<>();
+
+while (true) {
+    //4、与客户端建立连接。并返回一个 SocketChannel 用来与客户端通信
+    //由于ServerSocketChannel配置了非阻塞模式，此处不会阻塞，没有新客户端时返回null
+    SocketChannel socketChannel = serverSocketChannel.accept();
+
+    //判断是否有新客户端
+    if(socketChannel != null){
+        log.debug("remotePort:[{}],connected...",((InetSocketAddress)socketChannel.getRemoteAddress()).getPort());
+
+        //5、设置与客户端的连接为非阻塞模式
+        socketChannel.configureBlocking(false);
+
+        //新来的客户端放入客户端列表
+        clientSocketChannels.add(socketChannel);
+    }
+
+    //遍历客户端列表，接收客户端消息
+    for (SocketChannel clientSocketChannel : clientSocketChannels) {
+        int port = ((InetSocketAddress) clientSocketChannel.getRemoteAddress()).getPort();
+        ByteBuffer byteBuffer = ByteBuffer.allocate(16);
+        //6、获取客户端发来的消息，由于SocketChannel设置了非阻塞此处不再阻塞，没有消息时byteBuffer中不存在有效数据
+        clientSocketChannel.read(byteBuffer);
+
+        //判断是否读取到数据
+        if(byteBuffer.position() > 0){
+            log.debug("remotePort:[{}],read...", port);
+            byteBuffer.flip();
+
+            CharBuffer charBuffer = StandardCharsets.UTF_8.decode(byteBuffer);
+            log.debug("remotePort:[{}],message:[{}]", port,charBuffer);
+
+            //清除,准备接收下一次消息
+            byteBuffer.clear();
+        }
+    }
+}
+```
+
+与客户端连接后运行结果：
+
+```tex
+08:21:32.868 [main] DEBUG top.ersut.SocketChannelTest - serverSocketChannel start...
+08:21:43.578 [main] DEBUG top.ersut.SocketChannelTest - remotePort:[58374],connected...
+08:21:43.582 [main] DEBUG top.ersut.SocketChannelTest - remotePort:[58374],read...
+08:21:43.582 [main] DEBUG top.ersut.SocketChannelTest - remotePort:[58374],message:[hello!]
+08:21:46.583 [main] DEBUG top.ersut.SocketChannelTest - remotePort:[58374],read...
+08:21:46.584 [main] DEBUG top.ersut.SocketChannelTest - remotePort:[58374],message:[hello2!]
+08:21:46.584 [main] DEBUG top.ersut.SocketChannelTest - remotePort:[58382],connected...
+08:21:46.584 [main] DEBUG top.ersut.SocketChannelTest - remotePort:[58382],read...
+08:21:46.584 [main] DEBUG top.ersut.SocketChannelTest - remotePort:[58382],message:[hi!]
+08:21:49.584 [main] DEBUG top.ersut.SocketChannelTest - remotePort:[58382],read...
+08:21:49.584 [main] DEBUG top.ersut.SocketChannelTest - remotePort:[58382],message:[hi2!]
+```
+
+没有了阻塞所有消息接收正常
+
+##### 4.1.3.2 ⚠️非阻塞服务端的缺点
+
+1. 非阻塞解决了非阻塞的几个问题，但是带来的新的问题，由于没有了阻塞while循环一直在运行导致浪费cpu的资源
+
+**使用`Selector`可以解决这个痛点**
+
+### 4.2 Selector
 

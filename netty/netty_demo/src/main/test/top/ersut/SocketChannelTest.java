@@ -65,14 +65,14 @@ public class SocketChannelTest {
         serverSocketChannel.bind(new InetSocketAddress(6666));
         log.debug("serverSocketChannel start...");
 
-        //设置服务端为非阻塞模式
+        //3、设置服务端为非阻塞模式
         serverSocketChannel.configureBlocking(false);
 
         //用来存放连接的客户端
         List<SocketChannel> clientSocketChannels = new ArrayList<>();
 
         while (true) {
-            //3、与客户端建立连接。并返回一个 SocketChannel 用来与客户端通信
+            //4、与客户端建立连接。并返回一个 SocketChannel 用来与客户端通信
             //由于ServerSocketChannel配置了非阻塞模式，此处不会阻塞，没有新客户端时返回null
             SocketChannel socketChannel = serverSocketChannel.accept();
 
@@ -80,7 +80,7 @@ public class SocketChannelTest {
             if(socketChannel != null){
                 log.debug("remotePort:[{}],connected...",((InetSocketAddress)socketChannel.getRemoteAddress()).getPort());
 
-                //设置与客户端的连接为非阻塞模式
+                //5、设置与客户端的连接为非阻塞模式
                 socketChannel.configureBlocking(false);
 
                 //新来的客户端放入客户端列表
@@ -91,7 +91,7 @@ public class SocketChannelTest {
             for (SocketChannel clientSocketChannel : clientSocketChannels) {
                 int port = ((InetSocketAddress) clientSocketChannel.getRemoteAddress()).getPort();
                 ByteBuffer byteBuffer = ByteBuffer.allocate(16);
-                //4、获取客户端发来的消息，由于SocketChannel设置了非阻塞此处不再阻塞
+                //6、获取客户端发来的消息，由于SocketChannel设置了非阻塞此处不再阻塞，没有消息时byteBuffer中不存在有效数据
                 clientSocketChannel.read(byteBuffer);
 
                 //判断是否读取到数据
