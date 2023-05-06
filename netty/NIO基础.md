@@ -1306,3 +1306,91 @@ while (true) {
 
 ### 4.2 Selector
 
+优点：
+
+- 通过Selector，在单线程下可以管理多个channel（SocketChannel、ServerSocketChannel）
+  - 因为是单线程也解决了**多线程的占用内存资源**和**线程太多频繁切换**的问题
+- Selector会阻塞线程直到有管理的channel有事件发生，解决了浪费cpu资源的问题
+
+#### 4.2.1 Selector监听事件
+
+##### 1、创建Selector
+
+```java
+Selector selector = Selector.open();
+```
+
+##### 2、注册事件到channel
+
+```java
+serverSocketChannel.configureBlocking(false);
+SelectionKey selectionKeyByServer = serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
+```
+
+💡 **channel 必须工作在非阻塞模式**，FileChannel 没有非阻塞模式，因此不能配合 selector 一起使用
+
+register方法：channel中注册Selector
+
+- 参数1：Selector
+- 参数2：监听的事件类型
+  - SelectionKey#OP_ACCEPT：服务端有新客户端连接的事件
+  - SelectionKey#OP_CONNECT：客户端与服务端连接成功的事件
+  - SelectionKey#OP_READ：可读事件，异常断开、正常关闭也会调用这里，如果发送的数据大于 buffer 缓冲区，会触发多次读取事件
+  - SelectionKey#OP_WRITE：可写事件
+
+**注意：其他channel还可以绑定到这个Selector中进行管理**
+
+##### 3、阻塞线程等待监听的事件
+
+```java
+int count = selector.select();
+```
+
+##### 4、获取监听到的事件
+
+```java
+Set<SelectionKey> selectionKeys = selector.selectedKeys();
+```
+
+💡一些观察
+
+注册事件的返回值是`SelectionKey`类型，获取监听事件的类型是`Set<SelectionKey>`，众所周知`Set`是不重复的集合，那么也就是说，一个`Channel`中同一个事件，即使同一时间触发了两次，`selector.selectedKeys()`也要运行两次来接收。
+
+
+
+示例代码：
+
+```java
+
+try (ServerSocketChannel serverSocketChannel = ServerSocketChannel.open();
+     //1、创建 Selector
+     Selector selector = Selector.open();) {
+
+    serverSocketChannel.bind(new InetSocketAddress(6666));
+    log.debug("serverSocketChannel start...");
+
+    //只有非阻塞的channel才能使用Selector
+    serverSocketChannel.configureBlocking(false);
+    //2、服务端中注册selector，并监听 accept 事件
+    //register方法的参数1 Selector；参数2 监听的事件类型
+    SelectionKey selectionKeyByServer = serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
+
+    while (true) {
+        //3、等待触发监听的事件，这里会阻塞
+        int count = selector.select();
+
+        //4、获取监听到的事件
+        Set<SelectionKey> selectionKeys = selector.selectedKeys();
+
+        //遍历所有事件
+        Iterator<SelectionKey> iterator = selectionKeys.iterator();
+        while (iterator.hasNext()){
+            SelectionKey selectionKey = iterator.next();
+            log.debug("selectionKey:[{}]",selectionKey);
+        }
+    }
+}
+```
+
+#### 4.2.2 事件的处理
+
