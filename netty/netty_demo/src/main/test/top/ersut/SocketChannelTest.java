@@ -131,9 +131,9 @@ public class SocketChannelTest {
     }
 
 
-    //非阻塞的服务端
+    //Selector的 accept和Read 事件的处理
     @Test
-    public void Test() throws IOException {
+    public void SelectorAcceptAndReadTest() {
         try (ServerSocketChannel serverSocketChannel = ServerSocketChannel.open();
              //创建 Selector
              Selector selector = Selector.open();) {
@@ -165,55 +165,44 @@ public class SocketChannelTest {
                         log.debug("remotePort:[{}],connected...",((InetSocketAddress)socketChannel.getRemoteAddress()).getPort());
 
                         socketChannel.configureBlocking(false);
+                        //注册 read 事件
                         socketChannel.register(selector,SelectionKey.OP_READ);
                     } else if(selectionKey.isReadable()){
                         SocketChannel socketChannel = (SocketChannel)selectionKey.channel();
                         int port = ((InetSocketAddress) socketChannel.getRemoteAddress()).getPort();
 
                         ByteBuffer byteBuffer = ByteBuffer.allocate(16);
-                        socketChannel.read(byteBuffer);
+                        try {
+                            int len = socketChannel.read(byteBuffer);
+                            //-1代表客户端关闭
+                            if(len == -1){
+                                log.debug("remotePort:[{}],close...",port);
+                                //退出Selector
+                                selectionKey.cancel();
+                                socketChannel.close();
+                                continue;
+                            }
+                        } catch (IOException e){
+                            //处理客户端强制关闭的情况
+                            log.debug("remotePort:[{}],error...",port);
+                            //退出Selector
+                            selectionKey.cancel();
+                            socketChannel.close();
+                            continue;
+                        }
                         log.debug("remotePort:[{}],read...",port);
 
                         byteBuffer.flip();
                         CharBuffer charBuffer = StandardCharsets.UTF_8.decode(byteBuffer);
                         log.debug("remotePort:[{}],message:[{}]", port,charBuffer);
-
+                        byteBuffer.clear();
                     }
                 }
+                //事件处理后移除，否则该事件还会进入下一轮循环
                 iterator.remove();
-
-//
-//                //判断是否有新客户端
-//                if(socketChannel != null){
-//                    log.debug("remotePort:[{}],connected...",((InetSocketAddress)socketChannel.getRemoteAddress()).getPort());
-//
-//                    //5、设置与客户端的连接为非阻塞模式
-//                    socketChannel.configureBlocking(false);
-//
-//                    //新来的客户端放入客户端列表
-//                    clientSocketChannels.add(socketChannel);
-//                }
-//
-//                //遍历客户端列表，接收客户端消息
-//                for (SocketChannel clientSocketChannel : clientSocketChannels) {
-//                    int port = ((InetSocketAddress) clientSocketChannel.getRemoteAddress()).getPort();
-//                    ByteBuffer byteBuffer = ByteBuffer.allocate(16);
-//                    //6、获取客户端发来的消息，由于SocketChannel设置了非阻塞此处不再阻塞，没有消息时byteBuffer中不存在有效数据
-//                    clientSocketChannel.read(byteBuffer);
-//
-//                    //判断是否读取到数据
-//                    if(byteBuffer.position() > 0){
-//                        log.debug("remotePort:[{}],read...", port);
-//                        byteBuffer.flip();
-//
-//                        CharBuffer charBuffer = StandardCharsets.UTF_8.decode(byteBuffer);
-//                        log.debug("remotePort:[{}],message:[{}]", port,charBuffer);
-//
-//                        //清除,准备接收下一次消息
-//                        byteBuffer.clear();
-//                    }
-//                }
             }
+        } catch (IOException e){
+            log.error("",e);
         }
 
     }

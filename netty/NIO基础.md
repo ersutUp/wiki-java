@@ -1394,3 +1394,110 @@ try (ServerSocketChannel serverSocketChannel = ServerSocketChannel.open();
 
 #### 4.2.2 事件的处理
 
+```java
+//3、等待触发监听的事件，这里会阻塞
+int count = selector.select();
+
+//4、获取监听到的事件
+Set<SelectionKey> selectionKeys = selector.selectedKeys();
+
+//遍历所有事件
+Iterator<SelectionKey> iterator = selectionKeys.iterator();
+while (iterator.hasNext()){
+    SelectionKey selectionKey = iterator.next();
+    log.debug("selectionKey:[{}]",selectionKey);
+    //判断事件类型
+    if(selectionKey.isAcceptable()){
+        //处理事件
+        ServerSocketChannel channel = (ServerSocketChannel)selectionKey.channel();
+        SocketChannel socketChannel = channel.accept();
+        log.debug("remotePort:[{}],connected...",((InetSocketAddress)socketChannel.getRemoteAddress()).getPort());
+    }
+    //事件处理后移除，否则该事件还会进入下一轮循环
+    iterator.remove();
+}
+```
+
+`selectionKey.channel()`获取事件对应的channel。
+
+#####  ⚠️事件必须处理
+
+不处理`select`方法不会阻塞，要么处理，要么退出(`selectionKey.cancel()`，即不再监听对应channel的这个事件)
+
+##### 4.2.2.1 OP_ACCEPT事件
+
+通过`selectionKey.isAcceptable()`判断事件是否处理
+
+示例代码：
+
+```java
+while (iterator.hasNext()){
+    SelectionKey selectionKey = iterator.next();
+    log.debug("selectionKey:[{}]",selectionKey);
+	//判断事件类型
+    if(selectionKey.isAcceptable()){
+        //处理事件
+        ServerSocketChannel channel = (ServerSocketChannel)selectionKey.channel();
+        SocketChannel socketChannel = channel.accept();
+        log.debug("remotePort:[{}],connected...",((InetSocketAddress)socketChannel.getRemoteAddress()).getPort());
+    }
+    //事件处理后移除，否则该事件还会进入下一轮循环
+    iterator.remove();
+}
+```
+
+##### 4.2.2.2 OP_READ事件
+
+通过`selectionKey.isReadable()`判断事件是否处理
+
+**需要在新客户端连接上来的时候注册这个事件**
+
+```java
+while (iterator.hasNext()){
+    SelectionKey selectionKey = iterator.next();
+    log.debug("selectionKey:[{}]",selectionKey);
+    if(selectionKey.isAcceptable()){
+        ServerSocketChannel channel = (ServerSocketChannel)selectionKey.channel();
+        SocketChannel socketChannel = channel.accept();
+        log.debug("remotePort:[{}],connected...",((InetSocketAddress)socketChannel.getRemoteAddress()).getPort());
+
+        socketChannel.configureBlocking(false);
+        //注册 read 事件
+        socketChannel.register(selector,SelectionKey.OP_READ);
+    } else if(selectionKey.isReadable()){
+        SocketChannel socketChannel = (SocketChannel)selectionKey.channel();
+        int port = ((InetSocketAddress) socketChannel.getRemoteAddress()).getPort();
+
+        ByteBuffer byteBuffer = ByteBuffer.allocate(16);
+        socketChannel.read(byteBuffer);
+        log.debug("remotePort:[{}],read...",port);
+
+        byteBuffer.flip();
+        CharBuffer charBuffer = StandardCharsets.UTF_8.decode(byteBuffer);
+        log.debug("remotePort:[{}],message:[{}]", port,charBuffer);
+    }
+    //事件处理后移除，否则该事件还会进入下一轮循环
+    iterator.remove();
+}
+```
+
+**注意**：使用`Selector`的`Channel`必须是非阻塞的，即本实例中的`socketChannel.configureBlocking(false);`
+
+#####  **⚠️事件处理后要手动移除**
+
+`selector.selectedKeys()`中的Set集合，**在处理事件后系统不会自动移除**，那这样当我们执行了`channel.accept()`后，**下次其他事件进入**，还是会执行`channel.accept()`可是这时候返回的是null，所以要对`selectedKeys`集合进行移除。
+
+问题复现：服务端去掉`iterator.remove();`，客户端连接服务端，再发送一条消息。
+
+1. 第一次`accept`事件进入处理后继续阻塞
+2. 第二次`read`事件进入
+3. `if(selectionKey.isAcceptable())`判断还是可以通过
+4. 执行`SocketChannel socketChannel = channel.accept()`
+5.  `socketChannel `为null，下边的代码就要报空指针了
+
+**read事件中客户端的正常关闭和强制关闭，在服务端的处理**
+
+
+
+
+
