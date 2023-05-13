@@ -1392,7 +1392,7 @@ try (ServerSocketChannel serverSocketChannel = ServerSocketChannel.open();
 }
 ```
 
-#### 4.2.2 事件的处理
+### 4.3 事件的处理
 
 ```java
 //3、等待触发监听的事件，这里会阻塞
@@ -1424,7 +1424,7 @@ while (iterator.hasNext()){
 
 不处理`select`方法不会阻塞，要么处理，要么退出(`selectionKey.cancel()`，即不再监听对应channel的这个事件)
 
-##### 4.2.2.1 OP_ACCEPT事件
+#### 4.3.1 OP_ACCEPT事件
 
 通过`selectionKey.isAcceptable()`判断事件是否处理
 
@@ -1446,7 +1446,7 @@ while (iterator.hasNext()){
 }
 ```
 
-##### 4.2.2.2 OP_READ事件
+#### 4.3.2 OP_READ事件
 
 通过`selectionKey.isReadable()`判断事件是否处理
 
@@ -1475,6 +1475,7 @@ while (iterator.hasNext()){
         byteBuffer.flip();
         CharBuffer charBuffer = StandardCharsets.UTF_8.decode(byteBuffer);
         log.debug("remotePort:[{}],message:[{}]", port,charBuffer);
+        byteBuffer.clear();
     }
     //事件处理后移除，否则该事件还会进入下一轮循环
     iterator.remove();
@@ -1495,9 +1496,304 @@ while (iterator.hasNext()){
 4. 执行`SocketChannel socketChannel = channel.accept()`
 5.  `socketChannel `为null，下边的代码就要报空指针了
 
-**read事件中客户端的正常关闭和强制关闭，在服务端的处理**
+##### 处理客户端的正常关闭和强制关闭
+
+不处理会导致的问题：
+
+- 正常关闭：客户端会发送一条结束消息，这条消息不包含数据，那么服务端读取不到数据，所以`Selector`就认为没有处理这个事件，导致进入了死循环。正确的处理方式是服务端关闭这个channel并退出Selector。
+- 强制关闭：服务端会报异常：`java.io.IOException: 远程主机强迫关闭了一个现有的连接。`
+
+部分代码：
+
+```java
+...
+//等待触发监听的事件，这里会阻塞
+int count = selector.select();
+
+//获取监听到的事件
+Set<SelectionKey> selectionKeys = selector.selectedKeys();
+
+//遍历所有事件
+Iterator<SelectionKey> iterator = selectionKeys.iterator();
+while (iterator.hasNext()){
+    SelectionKey selectionKey = iterator.next();
+    if(selectionKey.isReadable()){
+        SocketChannel socketChannel = (SocketChannel)selectionKey.channel();
+        int port = ((InetSocketAddress) socketChannel.getRemoteAddress()).getPort();
+
+        ByteBuffer byteBuffer = ByteBuffer.allocate(16);
+        try {
+            int len = socketChannel.read(byteBuffer);
+            //-1代表客户端正常关闭
+            if(len == -1){
+                log.debug("remotePort:[{}],close...",port);
+                //退出Selector
+                selectionKey.cancel();
+                socketChannel.close();
+                continue;
+            }
+        } catch (IOException e){
+            //处理客户端 强制关闭 的情况
+            log.debug("remotePort:[{}],error...",port);
+            //退出Selector
+            selectionKey.cancel();
+            socketChannel.close();
+            continue;
+        }
+        log.debug("remotePort:[{}],read...",port);
+
+        byteBuffer.flip();
+        CharBuffer charBuffer = StandardCharsets.UTF_8.decode(byteBuffer);
+        log.debug("remotePort:[{}],message:[{}]", port,charBuffer);
+        byteBuffer.clear();
+    }
+}
+...
+```
+
+[示例代码#SelectorAcceptAndReadTest](./netty_demo/src/main/test/top/ersut/SocketChannelTest.java)
+
+##### 消息边界的处理
+
+为什么要处理消息边界
+
+客户端发送消息时，可能是一次发送多条消息（粘包），也看可能一条消息太大分多次发送。这就涉及到了拆包，拆包就是根据消息边界来拆分的。
 
 
 
+💡消息边界的解决方案
 
+1. 通过分割符来标识一条消息的结束，缺点是效率低（因为要遍历每个字节来查找分割符）
+
+2. 通过固定长度的消息来区分每条消息，若实际消息小于长度，用占位符补齐，缺点是浪费带宽且不灵活
+
+3. TLV编码
+
+   - T：Type消息类型
+   - L：Length消息的长度
+   - V：Value数据，数据的长度是由 L 指定的
+
+   优点：消息的长度已知的情况下，可以分配buffer的大小
+
+   缺点：消息过大时，影响服务端的吞吐量；由于buffer放在内存中，大消息且高并发的情况下，占用内存过多
+
+
+
+了解以下方法，让**消息可以连续**。
+
+创建**selectionKey的附件**
+
+```java
+ByteBuffer byteBuffer = ByteBuffer.allocate(8);
+socketChannel.register(selector,SelectionKey.OP_READ,byteBuffer);
+```
+
+参数：
+
+1. 选择器
+2. 事件
+3. selectionKey的附件（可以是任意对象）
+
+**selectionKey附件的使用**
+
+```java
+ByteBuffer byteBuffer = (ByteBuffer)selectionKey.attachment();
+```
+
+`attachment()`方法是获取selectionKey中绑定的附件
+
+```java
+ByteBuffer newByteBuffer = ByteBuffer.allocate(16);
+newByteBuffer.put(byteBuffer);
+selectionKey.attach(newByteBuffer);
+```
+
+`attach()`方法是更新selectionKey中的附件
+
+**通过附件可以实现同一个selectionKey中触发多次事件，让后续的事件获取上一个事件留下的内容，从而产生关联**
+
+消息边界的解决方案1：
+
+时序图
+
+```mermaid
+sequenceDiagram
+participant c as 客户端
+participant s as 服务端
+participant b as bytebuffer(8)
+participant b2 as bytebuffer(16)
+c->>s:第一次发送消息：01234567
+s->>b:存储到buffer
+b->>s:未遍历到分割符
+s->>b2:扩容
+b->>b2:拷贝
+c ->> s:第二次发送消息：89ABCDE\n
+s->> b2:存储到buffer
+b2->>s:遍历找到分割符\n
+
+
+
+```
+
+代码实现
+
+[服务端#messageBoundaryTest](./netty_demo/src/main/test/top/ersut/SocketChannelTest.java)：
+
+```java
+/**
+ * 解析数据
+ * @param souce
+ */
+private byte[] split(ByteBuffer souce){
+    byte[] msg = null;
+    //改为读模式，并获取limit
+    int len = souce.flip().limit();
+    for (int i = 0; i < len; i++) {
+        byte currByte = souce.get(i);
+        //如果有\n 代表有消息；
+        if(currByte == '\n'){
+            msg = new byte[i+1];
+            for (int j = 0; j <= i; j++) {
+                msg[j] = souce.get();
+            }
+            break;
+        }
+    }
+    //如果没有分割符，那么执行compact后，position和limit相等
+    souce.compact();
+    return msg;
+}
+
+/**
+ * 处理消息边界
+ * 每条消息以\n结尾
+ */
+@Test
+public void messageBoundaryTest() {
+    try (ServerSocketChannel serverSocketChannel = ServerSocketChannel.open();
+         //创建 Selector
+         Selector selector = Selector.open();) {
+
+        serverSocketChannel.bind(new InetSocketAddress(6667));
+        log.debug("serverSocketChannel start...");
+
+        //只有非阻塞的channel才能使用Selector
+        serverSocketChannel.configureBlocking(false);
+        //服务端中注册selector，并监听 accept 事件
+        //register方法的参数1 Selector；参数2 监听的事件类型
+        SelectionKey selectionKeyByServer = serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
+
+        while (true) {
+            //等待触发监听的事件，这里会阻塞
+            int count = selector.select();
+
+            //获取监听到的事件
+            Set<SelectionKey> selectionKeys = selector.selectedKeys();
+
+            //遍历所有事件
+            Iterator<SelectionKey> iterator = selectionKeys.iterator();
+            while (iterator.hasNext()){
+                SelectionKey selectionKey = iterator.next();
+                if(selectionKey.isAcceptable()){
+                    ServerSocketChannel channel = (ServerSocketChannel)selectionKey.channel();
+                    SocketChannel socketChannel = channel.accept();
+
+                    socketChannel.configureBlocking(false);
+                    ByteBuffer byteBuffer = ByteBuffer.allocate(8);
+                    //注册 read 事件 , 添加第三个参数：注册一个SelectionKey级的变量
+                    socketChannel.register(selector,SelectionKey.OP_READ,byteBuffer);
+                } else if(selectionKey.isReadable()){
+                    SocketChannel socketChannel = (SocketChannel)selectionKey.channel();
+                    int port = ((InetSocketAddress) socketChannel.getRemoteAddress()).getPort();
+
+                    //获取在SelectionKey中存入的变量
+                    ByteBuffer byteBuffer = (ByteBuffer)selectionKey.attachment();
+                    try {
+                        int len = socketChannel.read(byteBuffer);
+                        log.debug("remotePort:[{}],read...",port);
+                        //-1代表客户端关闭
+                        if(len == -1){
+                            log.debug("remotePort:[{}],close...",port);
+                            //退出Selector
+                            selectionKey.cancel();
+                            socketChannel.close();
+                            continue;
+                        }
+                    } catch (IOException e){
+                        //处理客户端强制关闭的情况
+                        log.debug("remotePort:[{}],error...",port);
+                        //退出Selector
+                        selectionKey.cancel();
+                        socketChannel.close();
+                        continue;
+                    }
+                    byte[] message;
+                    //循环，处理一次读取中多条信息的情况。
+                    do {
+                        message = split(byteBuffer);
+                        //是否需要扩容
+                        if(byteBuffer.position() == byteBuffer.limit()){
+                            byteBuffer.flip();
+                            //没有分割符 扩容
+                            int size = byteBuffer.capacity() * 2;
+                            log.debug("remotePort:[{}],dilatation:[{}]", port,size);
+                            ByteBuffer newByteBuffer = ByteBuffer.allocate(size);
+                            newByteBuffer.put(byteBuffer);
+                            selectionKey.attach(newByteBuffer);
+                            break;
+                        }
+                        //判断是否有消息
+                        if (message != null){
+                            String str = new String(message, StandardCharsets.UTF_8);
+                            log.debug("remotePort:[{}],message:[{}]", port,str);
+                        }
+                    }while (message != null);
+                }
+            }
+            //事件处理后移除，否则该事件还会进入下一轮循环
+            iterator.remove();
+        }
+    } catch (IOException e){
+        log.error("",e);
+    }
+}
+```
+
+[客户端#messageBoundaryClientTest](./netty_demo/src/main/test/top/ersut/SocketChannelTest.java)：
+
+```java
+public void messageBoundaryClientTest(){
+    try (SocketChannel socketChannel = SocketChannel.open();){
+        socketChannel.connect(new InetSocketAddress(6667));
+        socketChannel.write(StandardCharsets.UTF_8.encode("1949年，"));
+        socketChannel.write(StandardCharsets.UTF_8.encode("中华人民共和国\n"));
+        socketChannel.write(StandardCharsets.UTF_8.encode("成立啦！\n牛逼!\n"));
+        Thread.sleep(3*1000);
+    } catch (IOException e) {
+        e.printStackTrace();
+    } catch (InterruptedException e) {
+        e.printStackTrace();
+    }
+}
+```
+
+服务端打印：
+
+```tex
+10:39:54.853 [main] DEBUG top.ersut.SocketChannelTest - serverSocketChannel start...
+10:39:59.476 [main] DEBUG top.ersut.SocketChannelTest - remotePort:[64429],read...
+10:39:59.479 [main] DEBUG top.ersut.SocketChannelTest - remotePort:[64429],dilatation:[16]
+10:39:59.479 [main] DEBUG top.ersut.SocketChannelTest - remotePort:[64429],read...
+10:39:59.479 [main] DEBUG top.ersut.SocketChannelTest - remotePort:[64429],dilatation:[32]
+10:39:59.479 [main] DEBUG top.ersut.SocketChannelTest - remotePort:[64429],read...
+10:39:59.480 [main] DEBUG top.ersut.SocketChannelTest - remotePort:[64429],message:[1949年，中华人民共和国
+]
+10:39:59.480 [main] DEBUG top.ersut.SocketChannelTest - remotePort:[64429],read...
+10:39:59.480 [main] DEBUG top.ersut.SocketChannelTest - remotePort:[64429],message:[成立啦！
+]
+10:39:59.480 [main] DEBUG top.ersut.SocketChannelTest - remotePort:[64429],message:[牛逼!
+]
+10:40:02.477 [main] DEBUG top.ersut.SocketChannelTest - remotePort:[64429],read...
+10:40:02.477 [main] DEBUG top.ersut.SocketChannelTest - remotePort:[64429],close...
+```
 
