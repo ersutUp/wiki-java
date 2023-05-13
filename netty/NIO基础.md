@@ -1446,7 +1446,7 @@ while (iterator.hasNext()){
 }
 ```
 
-#### 4.3.2 OP_READ事件
+#### 4.3.2 OP_READ可读事件
 
 通过`selectionKey.isReadable()`判断事件是否处理
 
@@ -1557,11 +1557,15 @@ while (iterator.hasNext()){
 
 为什么要处理消息边界
 
+![](images/0023.png)
+
+
+
 客户端发送消息时，可能是一次发送多条消息（粘包），也看可能一条消息太大分多次发送。这就涉及到了拆包，拆包就是根据消息边界来拆分的。
 
 
 
-💡消息边界的解决方案
+##### 💡消息边界的解决方案
 
 1. 通过分割符来标识一条消息的结束，缺点是效率低（因为要遍历每个字节来查找分割符）
 
@@ -1796,4 +1800,179 @@ public void messageBoundaryClientTest(){
 10:40:02.477 [main] DEBUG top.ersut.SocketChannelTest - remotePort:[64429],read...
 10:40:02.477 [main] DEBUG top.ersut.SocketChannelTest - remotePort:[64429],close...
 ```
+
+#### 4.3.3 OP_WRITE可写事件
+
+发送消息的方法：`SocketChannel.write(ByteBuffer byteBuffer)`
+
+**为什么需要可写事件？明明通过write方法就可以直接写入的！**
+
+write方法不能保证一次把`ByteBuffer `中的数据全部发送出去，所以要使用循环直到数据发送完成，但是循环发送数据不是每一次都能发送，那么循环会出现空转的情况，造成浪费cpu、占用线程的情况。通过可写事件进行写入，可以解决这个问题，**因为可写事件只有在可以写入时触发**。
+
+问题复现代码：
+
+```java
+try (ServerSocketChannel serverSocketChannel = ServerSocketChannel.open();
+     //创建 Selector
+     Selector selector = Selector.open();) {
+    serverSocketChannel.bind(new InetSocketAddress(writePort));
+    log.debug("serverSocketChannel start...");
+    serverSocketChannel.configureBlocking(false);
+    SelectionKey selectionKeyByServer = serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
+    while (true) {
+        selector.select();
+
+        //获取监听到的事件
+        Set<SelectionKey> selectionKeys = selector.selectedKeys();
+
+        //遍历所有事件
+        Iterator<SelectionKey> iterator = selectionKeys.iterator();
+        while (iterator.hasNext()){
+            SelectionKey selectionKey = iterator.next();
+            if(selectionKey.isAcceptable()){
+                ServerSocketChannel channel = (ServerSocketChannel)selectionKey.channel();
+                SocketChannel socketChannel = channel.accept();
+
+                StringBuilder sendMessage = new StringBuilder();
+                for (int i = 0; i < 9999999; i++) {
+                    sendMessage.append("a");
+                }
+                ByteBuffer sendByteBuffer = StandardCharsets.UTF_8.encode(sendMessage.toString());
+                //方式一:循环发送消息，低效率发送，会出现空转情况
+                while (sendByteBuffer.hasRemaining()){
+                    int write = socketChannel.write(sendByteBuffer);
+                    log.info("发送数据长度:[{}]",write);
+                }
+            }
+        }
+        //事件处理后移除，否则该事件还会进入下一轮循环
+        iterator.remove();
+    }
+} catch (IOException e){
+    log.error("",e);
+}
+```
+
+[客户端#writeClientTest](./netty_demo/src/main/test/top/ersut/SocketChannelTest.java)：
+
+```java
+public void writeClientTest(){
+    try (SocketChannel socketChannel = SocketChannel.open();){
+        socketChannel.connect(new InetSocketAddress(writePort));
+
+        int countLen = 0;
+        ByteBuffer byteBuffer = ByteBuffer.allocate(1024*1024);
+        while (true){
+            countLen += socketChannel.read(byteBuffer);
+            log.info("已接收字节[{}]",countLen);
+            byteBuffer.clear();
+        }
+
+    } catch (IOException e) {
+        e.printStackTrace();
+    }
+}
+```
+
+部分打印信息：
+
+```tex
+23:13:16.525 [main] DEBUG top.ersut.SocketChannelTest - serverSocketChannel start...
+23:13:20.027 [main] INFO top.ersut.SocketChannelTest - 发送数据长度:[3014633]
+23:13:20.031 [main] INFO top.ersut.SocketChannelTest - 发送数据长度:[0]
+23:13:20.033 [main] INFO top.ersut.SocketChannelTest - 发送数据长度:[0]
+23:13:20.035 [main] INFO top.ersut.SocketChannelTest - 发送数据长度:[0]
+23:13:20.051 [main] INFO top.ersut.SocketChannelTest - 发送数据长度:[4718556]
+23:13:20.052 [main] INFO top.ersut.SocketChannelTest - 发送数据长度:[0]
+23:13:20.053 [main] INFO top.ersut.SocketChannelTest - 发送数据长度:[655355]
+23:13:20.058 [main] INFO top.ersut.SocketChannelTest - 发送数据长度:[1611455]
+```
+
+**通过上边的日志，可以发现有些循环并没有发送数据，造成循环空转**
+
+##### 使用可写事件的代码：
+
+[服务端#writeTest](./netty_demo/src/main/test/top/ersut/SocketChannelTest.java)：
+
+```java
+public void writeTest() {
+    try (ServerSocketChannel serverSocketChannel = ServerSocketChannel.open();
+         //创建 Selector
+         Selector selector = Selector.open();) {
+        serverSocketChannel.bind(new InetSocketAddress(writePort));
+        log.debug("serverSocketChannel start...");
+        serverSocketChannel.configureBlocking(false);
+        SelectionKey selectionKeyByServer = serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
+        while (true) {
+            selector.select();
+
+            //获取监听到的事件
+            Set<SelectionKey> selectionKeys = selector.selectedKeys();
+
+            //遍历所有事件
+            Iterator<SelectionKey> iterator = selectionKeys.iterator();
+            while (iterator.hasNext()){
+                SelectionKey selectionKey = iterator.next();
+                if(selectionKey.isAcceptable()){
+                    ServerSocketChannel channel = (ServerSocketChannel)selectionKey.channel();
+                    SocketChannel socketChannel = channel.accept();
+
+                    socketChannel.configureBlocking(false);
+                    //订阅多个事件，将值相加即可
+                    SelectionKey clientSelectionKey = socketChannel.register(selector, 0);
+
+                    StringBuilder sendMessage = new StringBuilder();
+                    for (int i = 0; i < 9999999; i++) {
+                        sendMessage.append("a");
+                    }
+                    ByteBuffer sendByteBuffer = StandardCharsets.UTF_8.encode(sendMessage.toString());
+
+                    //方式二：通过可写事件发送消息
+                    //判断是否有数据
+                    if(sendByteBuffer.hasRemaining()){
+                        //在selectionKey中关注新事件时，如果要保留旧事件，获取旧事件进行相加即可
+                        clientSelectionKey.interestOps(clientSelectionKey.interestOps()+SelectionKey.OP_WRITE);
+                        clientSelectionKey.attach(sendByteBuffer);
+                    }
+                } else if(selectionKey.isWritable()){
+                    /*
+                    为什么需要可写事件，明明发送数据可以循环直到数据发送完
+                    因为循环发送数据不是每一次都能发送，那么循环会出现空转的情况，造成浪费cpu、占用线程的情况。所以通过可写事件进行写入，可以解决这个问题。
+                     */
+                    SocketChannel socketChannel = (SocketChannel)selectionKey.channel();
+                    ByteBuffer sendByteBuffer = (ByteBuffer) selectionKey.attachment();
+                    //发送数据
+                    int write = socketChannel.write(sendByteBuffer);
+                    log.info("发送数据长度:[{}]",write);
+                    //判断是否发送完
+                    if(!sendByteBuffer.hasRemaining()){
+                        //数据发送完成，取消可写事件
+                        selectionKey.interestOps(selectionKey.interestOps()-SelectionKey.OP_WRITE);
+                        //释放附件
+                        selectionKey.attach(null);
+                    }
+                }
+            }
+            //事件处理后移除，否则该事件还会进入下一轮循环
+            iterator.remove();
+        }
+    } catch (IOException e){
+        log.error("",e);
+    }
+}
+```
+
+打印信息：
+
+```tex
+23:16:04.290 [main] DEBUG top.ersut.SocketChannelTest - serverSocketChannel start...
+23:17:05.213 [main] INFO top.ersut.SocketChannelTest - 发送数据长度:[3014633]
+23:17:05.229 [main] INFO top.ersut.SocketChannelTest - 发送数据长度:[3014633]
+23:17:05.234 [main] INFO top.ersut.SocketChannelTest - 发送数据长度:[3276775]
+23:17:05.235 [main] INFO top.ersut.SocketChannelTest - 发送数据长度:[693958]
+```
+
+##### 💡 write 为何要取消
+
+只要向 channel 发送数据时，socket 缓冲可写，这个事件会频繁触发，因此应当只在 socket 缓冲区写不下时再关注可写事件，数据写完之后再取消关注
 

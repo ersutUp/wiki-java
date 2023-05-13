@@ -343,4 +343,101 @@ public class SocketChannelTest {
         }
     }
 
+
+    private int writePort = 6668;
+    /**
+     * 可写事件
+     */
+    @Test
+    public void writeTest() {
+        try (ServerSocketChannel serverSocketChannel = ServerSocketChannel.open();
+             //创建 Selector
+             Selector selector = Selector.open();) {
+
+            serverSocketChannel.bind(new InetSocketAddress(writePort));
+            log.debug("serverSocketChannel start...");
+
+            serverSocketChannel.configureBlocking(false);
+            SelectionKey selectionKeyByServer = serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
+
+            while (true) {
+                selector.select();
+
+                //获取监听到的事件
+                Set<SelectionKey> selectionKeys = selector.selectedKeys();
+
+                //遍历所有事件
+                Iterator<SelectionKey> iterator = selectionKeys.iterator();
+                while (iterator.hasNext()){
+                    SelectionKey selectionKey = iterator.next();
+                    if(selectionKey.isAcceptable()){
+                        ServerSocketChannel channel = (ServerSocketChannel)selectionKey.channel();
+                        SocketChannel socketChannel = channel.accept();
+
+                        socketChannel.configureBlocking(false);
+                        //订阅多个事件，将值相加即可
+                        SelectionKey clientSelectionKey = socketChannel.register(selector, 0);
+
+                        StringBuilder sendMessage = new StringBuilder();
+                        for (int i = 0; i < 9999999; i++) {
+                            sendMessage.append("a");
+                        }
+                        ByteBuffer sendByteBuffer = StandardCharsets.UTF_8.encode(sendMessage.toString());
+                        //方式一:循环发送消息，低效率发送，会出现空转情况
+//                        while (sendByteBuffer.hasRemaining()){
+//                            int write = socketChannel.write(sendByteBuffer);
+//                            log.info("发送数据长度:[{}]",write);
+//                        }
+                        //方式二：通过可写事件发送消息
+                        //判断是否有数据
+                        if(sendByteBuffer.hasRemaining()){
+                            //在selectionKey中关注新事件时，如果要保留旧事件，获取旧事件进行相加即可
+                            clientSelectionKey.interestOps(clientSelectionKey.interestOps()+SelectionKey.OP_WRITE);
+                            clientSelectionKey.attach(sendByteBuffer);
+                        }
+                    } else if(selectionKey.isWritable()){
+                        /*
+                        为什么需要可写事件，明明发送数据可以循环直到数据发送完
+                        因为循环发送数据不是每一次都能发送，那么循环会出现空转的情况，造成浪费cpu、占用线程的情况。所以通过可写事件进行写入，可以解决这个问题。
+                         */
+                        SocketChannel socketChannel = (SocketChannel)selectionKey.channel();
+                        ByteBuffer sendByteBuffer = (ByteBuffer) selectionKey.attachment();
+                        //发送数据
+                        int write = socketChannel.write(sendByteBuffer);
+                        log.info("发送数据长度:[{}]",write);
+                        //判断是否发送完
+                        if(!sendByteBuffer.hasRemaining()){
+                            //数据发送完成，取消可写事件
+                            selectionKey.interestOps(selectionKey.interestOps()-SelectionKey.OP_WRITE);
+                            //释放附件
+                            selectionKey.attach(null);
+                        }
+                    }
+                }
+                //事件处理后移除，否则该事件还会进入下一轮循环
+                iterator.remove();
+            }
+        } catch (IOException e){
+            log.error("",e);
+        }
+    }
+    //可写事件的客户端
+    @Test
+    public void writeClientTest(){
+        try (SocketChannel socketChannel = SocketChannel.open();){
+            socketChannel.connect(new InetSocketAddress(writePort));
+
+            int countLen = 0;
+            ByteBuffer byteBuffer = ByteBuffer.allocate(1024*1024);
+            while (true){
+                countLen += socketChannel.read(byteBuffer);
+                log.info("已接收字节[{}]",countLen);
+                byteBuffer.clear();
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
 }
