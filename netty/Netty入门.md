@@ -174,6 +174,291 @@ s ->> s:打印解码后的消息 ChannelInboundHandlerAdapter.channelRead()
   * 工人既可以执行 io 操作，也可以进行任务处理，每位工人有任务队列，队列里可以堆放多个 channel 的待处理任务，任务分为普通任务、定时任务
   * **工人按照 pipeline 顺序，依次按照 handler 的规划（代码）处理数据**，可以为每道工序指定不同的工人
 
+## 3. 组件
 
+### 3.1 EventLoop
 
+#### 3.1.1 事件循环对象
+
+EventLoop本质上是一个任务执行器，同时维护了一个Selector，并且包含一个run方法来处理channel中源源不断的io事件
+
+**继承关系**
+
+![](./images/eventLoop-extend.png)
+
+- 继承了`java.util.concurrent.ScheduledExecutorService`任务执行器，因此包含了所有的线程池方法
+- 继承了`io.netty.util.concurrent.EventExecutor`，这个接口包含了：
+  - `boolean inEventLoop(Thread thread);`：**判断一个线程是否属于该EventLoop**
+
+#### 3.1.2 事件循环组对象
+
+`EventLoopGroup`是一组`EventLoop`，通过`EventLoopGroup`的`register`方法将`channel`绑定到某一个
+
+`EventLoop`，这个`channel`后续所有的io事件都由此`EventLoop`处理（保证了io事件处理时的线程安全）
+
+**`EventLoopGroup`的实现类**
+
+- NioEventLoopGroup：可处理io事件、普通任务和定时任务
+- DefaultEventLoopGroup：可普通任务和定时任务
+
+**简单的示例**
+
+```java
+EventLoopGroup group = new DefaultEventLoopGroup(2);
+//第一个eventLoop
+EventLoop eventLoop1 = group.next();
+//第二个eventLoop
+EventLoop eventLoop2 = group.next();
+//第一个eventLoop
+EventLoop eventLoop3 = group.next();
+//第二个eventLoop
+EventLoop eventLoop4 = group.next();
+
+//由于只有两个线程所以只有两个eventLoop，那么第一次和第三次获取的是同一个eventLoop，同理第二次和第四次获取的是同一个eventLoop
+Assert.assertEquals(eventLoop1,eventLoop3);
+Assert.assertEquals(eventLoop2,eventLoop4);
+```
+
+**处理普通任务和定时任务**
+
+```java
+EventLoopGroup group = new DefaultEventLoopGroup(2);
+
+//添加任务
+group.next().execute(() -> {
+    try {
+        Thread.sleep(1000);
+    } catch (InterruptedException e) {
+        e.printStackTrace();
+    }
+    log.debug("给eventLoop添加任务");
+});
+
+//添加定时任务
+group.next().scheduleAtFixedRate(
+        () -> log.debug(String.valueOf(LocalDateTime.now().getSecond()))
+        //多少秒后执行第一次
+        ,0
+        //每隔多久执行一次
+        ,1
+        //参数3的时间单位
+        , TimeUnit.SECONDS
+);
+
+log.debug("主线程");
+
+try {
+    Thread.sleep(1000*5);
+} catch (InterruptedException e) {
+    e.printStackTrace();
+}
+```
+
+控制台打印：
+
+```tex
+22:17:02.988 [main] DEBUG top.ersut.netty.EventLoopTest - 主线程
+22:17:03.006 [defaultEventLoopGroup-2-2] DEBUG top.ersut.netty.EventLoopTest - 3
+22:17:03.989 [defaultEventLoopGroup-2-1] DEBUG top.ersut.netty.EventLoopTest - 给eventLoop添加任务
+22:17:03.989 [defaultEventLoopGroup-2-2] DEBUG top.ersut.netty.EventLoopTest - 3
+22:17:04.988 [defaultEventLoopGroup-2-2] DEBUG top.ersut.netty.EventLoopTest - 4
+22:17:05.988 [defaultEventLoopGroup-2-2] DEBUG top.ersut.netty.EventLoopTest - 5
+22:17:06.989 [defaultEventLoopGroup-2-2] DEBUG top.ersut.netty.EventLoopTest - 6
+22:17:07.989 [defaultEventLoopGroup-2-2] DEBUG top.ersut.netty.EventLoopTest - 7
+```
+
+[示例代码#eventLoopGroupTest](./netty_demo/src/main/test/top/ersut/netty/EventLoopTest.java)
+
+#### 💡 优雅关闭
+
+优雅关闭 `shutdownGracefully` 方法。该方法会首先切换 `EventLoopGroup` 到关闭状态从而拒绝新的任务的加入，然后在任务队列的任务都处理完成后，停止线程的运行。从而确保整体应用是在正常有序的状态下退出的
+
+#### 多个EventLoopGroup，处理不同的事件
+
+[客户端代码](./netty_demo/src/main/test/top/ersut/netty/EventLoopTest.java)：
+
+```java
+//两个客户端各发送两条消息
+public void client() throws InterruptedException {
+    NioEventLoopGroup group = new NioEventLoopGroup();
+    Channel channel = new Bootstrap()
+            .group(group)
+            .channel(NioSocketChannel.class)
+            .handler(new ChannelInitializer<NioSocketChannel>() {
+                @Override
+                protected void initChannel(NioSocketChannel ch) throws Exception {
+                    ch.pipeline().addLast(new StringEncoder());
+                }
+            })
+            .connect(new InetSocketAddress(PORT))
+            .sync()
+            .channel();
+    Channel channel2 = new Bootstrap()
+            .group(group)
+            .channel(NioSocketChannel.class)
+            .handler(new ChannelInitializer<NioSocketChannel>() {
+                @Override
+                protected void initChannel(NioSocketChannel ch) throws Exception {
+                    ch.pipeline().addLast(new StringEncoder());
+                }
+            })
+            .connect(new InetSocketAddress(PORT))
+            .sync()
+            .channel();
+    channel.writeAndFlush("123");
+    Thread.sleep(1000);
+    channel2.writeAndFlush("abc");
+    Thread.sleep(1000);
+    channel.writeAndFlush("456");
+    Thread.sleep(1000);
+    channel2.writeAndFlush("def");
+
+    group.shutdownGracefully().sync();
+    channel.close();
+    channel2.close();
+}
+```
+
+[服务端代码](./netty_demo/src/main/test/top/ersut/netty/EventLoopTest.java)：
+
+```java
+public static void groupServer(){
+    new ServerBootstrap()
+            /**
+             * 参数1 parentGroup：处理 NioServerSocketChannel 的accept
+             * 参数2 childGroup：处理 NioSocketChannel 的 读写
+             */
+            .group(new NioEventLoopGroup(1),new NioEventLoopGroup(2))
+            .channel(NioServerSocketChannel.class)
+            .childHandler(new ChannelInitializer<NioSocketChannel>() {
+                @Override
+                protected void initChannel(NioSocketChannel ch) throws Exception {
+                    ch.pipeline().addLast(new ChannelInboundHandlerAdapter(){
+                        @Override
+                        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                            ByteBuf message = (ByteBuf) msg;
+                            log.debug(message.toString(StandardCharsets.UTF_8));
+                        }
+                    });
+                }
+            })
+            .bind(PORT);
+}
+```
+
+打印信息：
+
+```tex
+22:36:20.907 [nioEventLoopGroup-3-1] DEBUG top.ersut.netty.EventLoopTest - 123
+22:36:21.891 [nioEventLoopGroup-3-2] DEBUG top.ersut.netty.EventLoopTest - abc
+22:36:22.890 [nioEventLoopGroup-3-1] DEBUG top.ersut.netty.EventLoopTest - 456
+22:36:23.889 [nioEventLoopGroup-3-2] DEBUG top.ersut.netty.EventLoopTest - def
+```
+
+#### 💡进程名解释
+
+nioEventLoopGroup-3-2
+
+- 其中的”3“代表第3个进程池
+- 其中的“2”代表EventLoopGroup中的第二个EventLoop
+
+**通过打印的信息可以看出同一个channel中的信息在固定的EventLoop中处理，即channel与EventLoop绑定**
+
+图解:
+
+![](images/0042.png)
+
+#### 给通道处理器指定EventLoopGroup
+
+客户端代码与上边的一致
+
+[服务端代码](./netty_demo/src/main/test/top/ersut/netty/EventLoopTest.java)：
+
+```java
+public static void pipelineAppointGroupServer(){
+    EventLoopGroup defaultEventLoopGroup = new DefaultEventLoopGroup(2);
+    new ServerBootstrap()
+            /**
+             * 参数1 parentGroup：处理 NioServerSocketChannel 的accept
+             * 参数2 childGroup：处理 NioSocketChannel 的 读写
+             */
+            .group(new NioEventLoopGroup(),new NioEventLoopGroup())
+            .channel(NioServerSocketChannel.class)
+            .childHandler(new ChannelInitializer<NioSocketChannel>() {
+                @Override
+                protected void initChannel(NioSocketChannel ch) throws Exception {
+                    ch.pipeline().addLast(new ChannelInboundHandlerAdapter(){
+                        @Override
+                        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                            ByteBuf message = (ByteBuf) msg;
+                            log.debug(message.toString(StandardCharsets.UTF_8));
+                            //传给pipeline中的下一个处理器
+                            super.channelRead(ctx,msg);
+                        }
+                    });
+                    ch.pipeline().addLast(defaultEventLoopGroup,"default",new ChannelInboundHandlerAdapter(){
+                        @Override
+                        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                            ByteBuf message = (ByteBuf) msg;
+                            log.debug(message.toString(StandardCharsets.UTF_8)+"-default");
+                        }
+                    });
+                }
+            })
+            .bind(PORT);
+}
+```
+
+- **当多个通道处理器时，需要通过`super.channelRead(ctx,msg)`将消息传递给下一个处理器**
+
+- **通过`addLast(EventExecutorGroup group, String name, ChannelHandler handler)`方法给通道处理器指定EventLoopGroup**
+  - 参数1：指定EventLoopGroup
+  - 参数2：给通道处理器指定名称
+  - 参数3：通道处理器
+
+控制台打印：
+
+```tex
+22:54:55.282 [nioEventLoopGroup-4-1] DEBUG top.ersut.netty.EventLoopTest - 123
+22:54:55.283 [defaultEventLoopGroup-2-1] DEBUG top.ersut.netty.EventLoopTest - 123-default
+22:54:56.246 [nioEventLoopGroup-4-2] DEBUG top.ersut.netty.EventLoopTest - abc
+22:54:56.247 [defaultEventLoopGroup-2-2] DEBUG top.ersut.netty.EventLoopTest - abc-default
+22:54:57.247 [nioEventLoopGroup-4-1] DEBUG top.ersut.netty.EventLoopTest - 456
+22:54:57.247 [defaultEventLoopGroup-2-1] DEBUG top.ersut.netty.EventLoopTest - 456-default
+22:54:58.247 [nioEventLoopGroup-4-2] DEBUG top.ersut.netty.EventLoopTest - def
+22:54:58.247 [defaultEventLoopGroup-2-2] DEBUG top.ersut.netty.EventLoopTest - def-default
+```
+
+**通过打印的信息可以看出名为 default 的通道处理器使用了其他线程**
+
+图解：
+
+![](./images/0041.png)
+
+#### 💡多个通道处理器之间是怎么切换EventLoop的
+
+追踪`super.channelRead(ctx,msg);`方法可以找到如下源码
+
+```java
+static void invokeChannelRead(final AbstractChannelHandlerContext next, Object msg) {
+    final Object m = next.pipeline.touch(ObjectUtil.checkNotNull(msg, "msg"), next);
+    EventExecutor executor = next.executor();
+    //判断下一个EventLoop与当前EventLoop是否为同一个线程
+    if (executor.inEventLoop()) {
+        //是同一个，直接运行
+        next.invokeChannelRead(m);
+    } else {
+        //不是同一个，将需要执行的代码作为任务添加到给下一个EventLoop(切换EventLoop)
+        executor.execute(new Runnable() {
+            @Override
+            public void run() {
+                next.invokeChannelRead(m);
+            }
+        });
+    }
+}
+```
+
+* 如果两个 handler 绑定的是同一个线程，那么就直接调用
+* 否则，把要调用的代码封装为一个任务对象，由下一个 handler 的线程来调用
 
