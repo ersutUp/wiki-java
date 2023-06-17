@@ -9,3 +9,4 @@ spring/**/target/**
 待验证/**/target/**
 *.class
 netty/netty_demo/**/*.txt
+netty/netty_demo/target/*
