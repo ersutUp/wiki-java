@@ -11,9 +11,11 @@ import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
+import io.netty.util.concurrent.Future;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -44,7 +46,7 @@ public class ChannelTest {
     /**
      * 以下代码存在的问题：过早的获取channel，导致消息发送失败
      */
-    static class prematureGetChannelTest{
+    static class PrematureGetChannelTest{
         public static void main(String[] args) throws InterruptedException {
             ChannelFuture channelFuture = bootstrap().connect(new InetSocketAddress(PORT));
 
@@ -58,7 +60,7 @@ public class ChannelTest {
      * 通过 ChannelFuture#sync() 解决 过早的获取channel 的问题
      * ChannelFuture#sync()方法:等待异步线程完成，此处是等待连接成功
      */
-    static class channelBySyncTest{
+    static class ChannelBySyncTest{
         public static void main(String[] args) throws InterruptedException {
             ChannelFuture channelFuture = bootstrap().connect(new InetSocketAddress(PORT));
 
@@ -73,8 +75,8 @@ public class ChannelTest {
      * channelFuture.addListener(ChannelFutureListener listener)方法:异步线程中连接成功后执行发送消息
      * 通过给 ChannelFuture 添加监听器 解决 过早的获取channel 的问题
      */
-    static class channelByListenerTest{
-        public static void main(String[] args) throws InterruptedException {
+    static class ChannelByListenerTest{
+        public static void main(String[] args) {
             ChannelFuture channelFuture = bootstrap().connect(new InetSocketAddress(PORT));
 
             //等待连接成功
@@ -90,9 +92,9 @@ public class ChannelTest {
      * 关闭客户端
      * 以下代码存在的问题：
      *  1、由于客户端关闭是在NioEventLoop线程中进行的，所以主线程中不能正确的执行关闭后的任务
-     *  2、关闭后未执行结束进程
+     *  2、关闭Channel后进程没有终止
      */
-    static class channelCloseTest{
+    static class ChannelCloseTest {
         public static void main(String[] args) throws InterruptedException {
             NioEventLoopGroup eventLoopGroup = new NioEventLoopGroup();
             ChannelFuture channelFuture = bootstrap(eventLoopGroup).connect(new InetSocketAddress(PORT));
@@ -103,69 +105,66 @@ public class ChannelTest {
             channel.writeAndFlush("channelClose");
             log.info("close......");
             channel.close();
+            //期望channel成功关闭后再运行
             log.info("closed");
         }
+    }
+    /**
+     * 问题1的解决方案A，将主线程改为同步阻塞的等待channl的关闭
+     */
+    static class ChannelCloseFutureSyncTest{
+        public static void main(String[] args) throws InterruptedException {
+            NioEventLoopGroup eventLoopGroup = new NioEventLoopGroup();
+            ChannelFuture channelFuture = bootstrap(eventLoopGroup).connect(new InetSocketAddress(PORT));
 
-        /**
-         * 问题1的解决方案A，将主线程改为同步阻塞的等待channl的关闭
-         */
-        static class channelCloseFutureSyncTest{
-            public static void main(String[] args) throws InterruptedException {
-                NioEventLoopGroup eventLoopGroup = new NioEventLoopGroup();
-                ChannelFuture channelFuture = bootstrap(eventLoopGroup).connect(new InetSocketAddress(PORT));
-
-                //等待连接成功
-                channelFuture.sync();
-                Channel channel = channelFuture.channel();
-                new Thread(() -> {
-                    channel.writeAndFlush("channelCloseFutureSync");
-                    log.info("close......");
-                    try {
-                        Thread.sleep(3000);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                    channel.close();
-                }).run();
-                //同步阻塞，等待channel关闭
-                channel.closeFuture().sync();
-                log.info("closed");
-                eventLoopGroup.shutdownGracefully();
-            }
-        }
-        /**
-         * 1、正确处理关闭客户端后的任务，通过调用closeFuture再添加监听器解决
-         * <code>
-         *     ChannelFuture closeFuture = channel.closeFuture();
-         *     closeFuture.addListener((ChannelFutureListener) future -> {
-         *         log.info("closed");
-         *     });
-         * </code>
-         * 2、关闭 eventLoopGroup 后可结束进程，通过 shutdownGracefully() 即可关闭 eventLoopGroup
-         */
-        static class channelCloseFutureListenerTest{
-            public static void main(String[] args) throws InterruptedException {
-                NioEventLoopGroup eventLoopGroup = new NioEventLoopGroup();
-                ChannelFuture channelFuture = bootstrap(eventLoopGroup).connect(new InetSocketAddress(PORT));
-
-                //等待连接成功
-                channelFuture.sync();
-                Channel channel = channelFuture.channel();
-                channel.writeAndFlush("channelCloseFutureListener");
-                log.info("channel isActive:{}",channel.isActive());
-
-                ChannelFuture closeFuture = channel.closeFuture();
-                closeFuture.addListener((ChannelFutureListener) future -> {
-                    Channel channel1 = future.channel();
-                    log.info("channel isActive:{}",channel1.isActive());
-                    log.info("closed");
-                    //eventLoopGroup中还有线程，关闭eventLoopGroup后可结束进程
-                    eventLoopGroup.shutdownGracefully();
-                });
-
+            //等待连接成功
+            channelFuture.sync();
+            Channel channel = channelFuture.channel();
+            new Thread(() -> {
+                channel.writeAndFlush("channelCloseFutureSync");
                 log.info("close......");
-                channel.close();
-            }
+                try {
+                    Thread.sleep(3000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }).run();
+            //eventLoopGroup中还有线程，关闭eventLoopGroup中的线程，同时会关闭channel
+            eventLoopGroup.shutdownGracefully().sync();
+            log.info("closed");
+        }
+    }
+    /**
+     * 1、解决方案B：正确处理关闭客户端后的任务，通过调用closeFuture再添加监听器解决
+     * <code>
+     *     ChannelFuture closeFuture = channel.closeFuture();
+     *     closeFuture.addListener((ChannelFutureListener) future -> {
+     *         log.info("closed");
+     *     });
+     * </code>
+     * 2、关闭 eventLoopGroup 后可结束进程，通过 shutdownGracefully() 即可关闭 eventLoopGroup
+     */
+    static class ChannelCloseFutureListenerTest{
+        public static void main(String[] args) throws InterruptedException {
+            NioEventLoopGroup eventLoopGroup = new NioEventLoopGroup();
+            ChannelFuture channelFuture = bootstrap(eventLoopGroup).connect(new InetSocketAddress(PORT));
+
+            //等待连接成功
+            channelFuture.sync();
+            Channel channel = channelFuture.channel();
+            channel.writeAndFlush("channelCloseFutureListener");
+            log.info("channel isActive:{}",channel.isActive());
+
+            ChannelFuture closeFuture = channel.closeFuture();
+            closeFuture.addListener((ChannelFutureListener) future -> {
+                Channel channel1 = future.channel();
+                log.info("channel isActive:{}",channel1.isActive());
+                log.info("closed");
+            });
+
+            log.info("close......");
+            //eventLoopGroup中还有线程，关闭eventLoopGroup中的线程，同时会关闭channel
+           eventLoopGroup.shutdownGracefully();
         }
     }
 
@@ -193,6 +192,11 @@ public class ChannelTest {
         channelFuture.addListener((ChannelFutureListener) (future) -> {
             log.info("服务端启动完成");
         });
+        Channel serverChannel = channelFuture.channel();
+        serverChannel.closeFuture().addListener(future -> {
+
+        });
+        serverChannel.close();
     }
 
 }

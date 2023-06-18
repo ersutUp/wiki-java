@@ -513,6 +513,8 @@ channel.writeAndFlush("not sync");
 log.info("channel isActive:{}",channel.isActive());
 ```
 
+[示例代码PrematureGetChannelTest](./netty_demo/src/main/test/top/ersut/netty/ChannelTest.java)
+
 控制台打印：
 
 ```tex
@@ -521,6 +523,8 @@ log.info("channel isActive:{}",channel.isActive());
 2023-06-17 22:09:09 [nioEventLoopGroup-2-1] DEBUG i.n.handler.logging.LoggingHandler - [id: 0x35a9f64c] CONNECT: 0.0.0.0/0.0.0.0:15218
 2023-06-17 22:09:09 [nioEventLoopGroup-2-1] DEBUG i.n.handler.logging.LoggingHandler - [id: 0x35a9f64c, L:/192.168.123.137:52198 - R:0.0.0.0/0.0.0.0:15218] ACTIVE
 ```
+
+`id: 0x35a9f64c, L:/192.168.123.137:52198 - R:0.0.0.0/0.0.0.0:15218] ACTIVE`这行日志代表channel成功连接
 
 #### 上述代码存在的问题
 
@@ -568,6 +572,8 @@ channel.writeAndFlush("sync");
 log.info("channel isActive:{}",channel.isActive());
 ```
 
+[示例代码ChannelBySyncTest](./netty_demo/src/main/test/top/ersut/netty/ChannelTest.java)
+
 控制台打印：
 
 ```java
@@ -603,6 +609,8 @@ channelFuture.addListener((ChannelFutureListener) channelFuture1 -> {
 });
 ```
 
+[示例代码ChannelByListenerTest](./netty_demo/src/main/test/top/ersut/netty/ChannelTest.java)
+
 控制台打印：
 
 ```tex
@@ -626,7 +634,87 @@ channelFuture.addListener((ChannelFutureListener) channelFuture1 -> {
 2023-06-17 23:48:29.858 [nioEventLoopGroup-3-2] INFO  top.ersut.netty.ChannelTest - ChannelFutureListener
 ```
 
+##### 💡两种方案线程为什么不一样
+
+比较两个方案中，`log.info("channel isActive:{}",channel.isActive());`都是打印的 channel isActive:true ，但是他们的线程不一样：
+
+- sync()方式是main线程（主线程），该方式是同步等待结果，所以在主线程打印。
+- addListener()方式是 nioEventLoopGroup-2-1 线程，该方式是在子线程中连接成功后直接运行我们的代码，所以在 nioEventLoopGroup-2-1 线程
+
 ### 3.2.2 Channel的关闭
+
+```java
+NioEventLoopGroup eventLoopGroup = new NioEventLoopGroup();
+ChannelFuture channelFuture = bootstrap(eventLoopGroup).connect(new InetSocketAddress(PORT));
+ 
+//等待连接成功
+channelFuture.sync();
+Channel channel = channelFuture.channel();
+channel.writeAndFlush("channelClose");
+log.info("close......");
+channel.close();
+//期望channel成功关闭后再运行
+log.info("closed");
+```
+
+[示例代码ChannelCloseTest](./netty_demo/src/main/test/top/ersut/netty/ChannelTest.java)
+
+控制台打印：
+
+```tex
+2023-06-18 13:03:48 [nioEventLoopGroup-2-1] DEBUG i.n.handler.logging.LoggingHandler - [id: 0x3908f889] REGISTERED
+2023-06-18 13:03:48 [nioEventLoopGroup-2-1] DEBUG i.n.handler.logging.LoggingHandler - [id: 0x3908f889] CONNECT: 0.0.0.0/0.0.0.0:15218
+2023-06-18 13:03:48 [nioEventLoopGroup-2-1] DEBUG i.n.handler.logging.LoggingHandler - [id: 0x3908f889, L:/192.168.123.137:53074 - R:0.0.0.0/0.0.0.0:15218] ACTIVE
+2023-06-18 13:03:48 [main] INFO  top.ersut.netty.ChannelTest - close......
+2023-06-18 13:03:48 [main] INFO  top.ersut.netty.ChannelTest - closed
+2023-06-18 13:03:48 [nioEventLoopGroup-2-1] DEBUG i.n.handler.logging.LoggingHandler - [id: 0x3908f889, L:/192.168.123.137:53074 - R:0.0.0.0/0.0.0.0:15218] WRITE: 12B
+         +-------------------------------------------------+
+         |  0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f |
++--------+-------------------------------------------------+----------------+
+|00000000| 63 68 61 6e 6e 65 6c 43 6c 6f 73 65             |channelClose    |
++--------+-------------------------------------------------+----------------+
+2023-06-18 13:03:48 [nioEventLoopGroup-2-1] DEBUG i.n.handler.logging.LoggingHandler - [id: 0x3908f889, L:/192.168.123.137:53074 - R:0.0.0.0/0.0.0.0:15218] FLUSH
+2023-06-18 13:03:48 [nioEventLoopGroup-2-1] DEBUG i.n.handler.logging.LoggingHandler - [id: 0x3908f889, L:/192.168.123.137:53074 - R:0.0.0.0/0.0.0.0:15218] CLOSE
+2023-06-18 13:03:48 [nioEventLoopGroup-2-1] DEBUG i.n.handler.logging.LoggingHandler - [id: 0x3908f889, L:/192.168.123.137:53074 ! R:0.0.0.0/0.0.0.0:15218] INACTIVE
+2023-06-18 13:03:48 [nioEventLoopGroup-2-1] DEBUG i.n.handler.logging.LoggingHandler - [id: 0x3908f889, L:/192.168.123.137:53074 ! R:0.0.0.0/0.0.0.0:15218] UNREGISTERED
+```
+
+`[id: 0x3908f889, L:/192.168.123.137:53074 - R:0.0.0.0/0.0.0.0:15218] CLOSE`这行日志代表channel成功关闭
+
+#### 上述代码存在的问题
+
+1. 由于客户端关闭是在NioEventLoop线程中进行的，所以主线程中不能正确的执行关闭后的任务
+2. 关闭Channel后进程没有终止
+
+#### 问题1分析
+
+通过日志我们可以发现`log.info("closed");`执行在channel成功关闭之前，与我们的期望（channel成功关闭后再运行）不一致
+
+#### 问题1的解决方案：closeFuture()
+
+通过channel的closeFuture()可以获取关闭channel的ChannelFuture
+
+解决方案
+
+- 通过sync()同步等待结果，[示例代码ChannelCloseFutureSyncTest](./netty_demo/src/main/test/top/ersut/netty/ChannelTest.java)
+- 通过addListener()添加监听器[示例代码ChannelCloseFutureListenerTest](./netty_demo/src/main/test/top/ersut/netty/ChannelTest.java)
+
+此处不再过多叙述与connect（连接服务端）返回的ChannelFuture是一个类
+
+- connect()的ChannelFuture是关于channel连接成功的
+- closeFuture()的ChannelFuture是关于channel关闭成功的
+
+#### 问题2分析
+
+除主线程外，每个 **EventLoop 都有自己的线程**，那么当主线程代码执行完成后，由于  **EventLoop 的线程还未结束，所以进程不会结束。**
+
+**只有结束所有的线程，进程才会终止。**
+
+#### 问题2的解决方案
+
+之前提到过NioEventLoopGroup提供了shutdownGracefully方法用来**停止其包含的所有EventLoop对应的线程**。
+
+注意：shutdownGracefully方法**同时会关闭channel**
 
 ```java
 NioEventLoopGroup eventLoopGroup = new NioEventLoopGroup();
@@ -635,33 +723,42 @@ ChannelFuture channelFuture = bootstrap(eventLoopGroup).connect(new InetSocketAd
 //等待连接成功
 channelFuture.sync();
 Channel channel = channelFuture.channel();
-channel.writeAndFlush("channelClose");
+channel.writeAndFlush("channelCloseFutureListener");
+log.info("channel isActive:{}",channel.isActive());
+
+ChannelFuture closeFuture = channel.closeFuture();
+closeFuture.addListener((ChannelFutureListener) future -> {
+    Channel channel1 = future.channel();
+    log.info("channel isActive:{}",channel1.isActive());
+    log.info("closed");
+});
+
 log.info("close......");
-channel.close();
-log.info("closed");
+//eventLoopGroup中还有线程，关闭eventLoopGroup中的线程，同时会关闭channel
+eventLoopGroup.shutdownGracefully();
 ```
+
+[示例代码ChannelCloseFutureListenerTest](./netty_demo/src/main/test/top/ersut/netty/ChannelTest.java)
 
 控制台打印：
 
 ```tex
-
+2023-06-18 16:41:53 [nioEventLoopGroup-2-1] DEBUG i.n.handler.logging.LoggingHandler - [id: 0x1a1b49c3] REGISTERED
+2023-06-18 16:41:53 [nioEventLoopGroup-2-1] DEBUG i.n.handler.logging.LoggingHandler - [id: 0x1a1b49c3] CONNECT: 0.0.0.0/0.0.0.0:15218
+2023-06-18 16:41:53 [nioEventLoopGroup-2-1] DEBUG i.n.handler.logging.LoggingHandler - [id: 0x1a1b49c3, L:/192.168.123.137:59394 - R:0.0.0.0/0.0.0.0:15218] ACTIVE
+2023-06-18 16:41:53 [main] INFO  top.ersut.netty.ChannelTest - close......
+2023-06-18 16:41:53 [nioEventLoopGroup-2-1] DEBUG i.n.handler.logging.LoggingHandler - [id: 0x1a1b49c3, L:/192.168.123.137:59394 - R:0.0.0.0/0.0.0.0:15218] WRITE: 22B
+         +-------------------------------------------------+
+         |  0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f |
++--------+-------------------------------------------------+----------------+
+|00000000| 63 68 61 6e 6e 65 6c 43 6c 6f 73 65 46 75 74 75 |channelCloseFutu|
+|00000010| 72 65 53 79 6e 63                               |reSync          |
++--------+-------------------------------------------------+----------------+
+2023-06-18 16:41:53 [nioEventLoopGroup-2-1] DEBUG i.n.handler.logging.LoggingHandler - [id: 0x1a1b49c3, L:/192.168.123.137:59394 - R:0.0.0.0/0.0.0.0:15218] FLUSH
+2023-06-18 16:41:56 [nioEventLoopGroup-2-1] DEBUG i.n.handler.logging.LoggingHandler - [id: 0x1a1b49c3, L:/192.168.123.137:59394 ! R:0.0.0.0/0.0.0.0:15218] INACTIVE
+2023-06-18 16:41:56 [nioEventLoopGroup-2-1] DEBUG i.n.handler.logging.LoggingHandler - [id: 0x1a1b49c3, L:/192.168.123.137:59394 ! R:0.0.0.0/0.0.0.0:15218] UNREGISTERED
+2023-06-18 16:41:58 [main] INFO  top.ersut.netty.ChannelTest - closed
 ```
 
-#### 上述代码存在的问题
+成功解决！
 
-1. 由于客户端关闭是在NioEventLoop线程中进行的，所以主线程中不能正确的执行关闭后的任务
-2. 关闭后未执行结束进程
-
-#### 问题1分析
-
-
-
-#### 问题1的解决方案
-
-
-
-#### 问题2分析
-
-
-
-#### 问题2的解决方案
