@@ -462,7 +462,7 @@ static void invokeChannelRead(final AbstractChannelHandlerContext next, Object m
 * 如果两个 handler 绑定的是同一个线程，那么就直接调用
 * 否则，把要调用的代码封装为一个任务对象，由下一个 handler 的线程来调用
 
-## 3.2 Channel
+### 3.2 Channel
 
 注意这里的Channel是netty定义的，不是Java自己的Channel
 
@@ -503,7 +503,7 @@ public static Bootstrap bootstrap(NioEventLoopGroup nioEventLoopGroup){
 
 [示例代码#bootstrap](./netty_demo/src/main/test/top/ersut/netty/ChannelTest.java)
 
-### 3.2.1 Channel的连接
+#### 3.2.1 Channel的连接
 
 ```java
 ChannelFuture channelFuture = bootstrap().connect(new InetSocketAddress(PORT));
@@ -526,17 +526,17 @@ log.info("channel isActive:{}",channel.isActive());
 
 `id: 0x35a9f64c, L:/192.168.123.137:52198 - R:0.0.0.0/0.0.0.0:15218] ACTIVE`这行日志代表channel成功连接
 
-#### 上述代码存在的问题
+##### 上述代码存在的问题
 
 - **过早的获取channel，导致消息发送失败**
 
-#### 问题分析
+##### 问题分析
 
 通过上述日志中 `channel isActive:false`可以看到 channel 是非活动状态，发送消息的代码是在此条日志之前
 
 非活动状态的channel代表客户端与服务端还未成功连接，所以这条消息发送失败。
 
-#### 解决方案：ChannelFuture
+##### 解决方案：ChannelFuture
 
 JDK的Future是获取异步线程的结果，他与ChannelFuture的关系：
 
@@ -544,13 +544,13 @@ JDK的Future是获取异步线程的结果，他与ChannelFuture的关系：
 
 ChannelFuture继承自JDK的Future，并且进行了增强。
 
-##### ChannelFuture中常用的方法
+**ChannelFuture中常用的方法**
 
 - channel()：获取channel
 - sync()：同步等待结果
 - addListener()：添加监听器
 
-##### ChannelFuture的获取
+**ChannelFuture的获取**
 
 ```
 ChannelFuture channelFuture = bootstrap().connect(new InetSocketAddress(PORT));
@@ -560,7 +560,7 @@ ChannelFuture channelFuture = bootstrap().connect(new InetSocketAddress(PORT));
 
 **connect方法是异步的，那么不等待连接成功就返回了，因此通过ChannelFuture.channel()获取channel并不一定是已连接的。**
 
-##### 方案1：通过sync()同步等待结果
+##### **方案1：通过sync()同步等待结果**
 
 ```java
 ChannelFuture channelFuture = bootstrap().connect(new InetSocketAddress(PORT));
@@ -596,7 +596,7 @@ log.info("channel isActive:{}",channel.isActive());
 2023-06-17 23:32:42.395 [nioEventLoopGroup-3-1] INFO  top.ersut.netty.ChannelTest - sync
 ```
 
-##### 方案2：通过addListener()添加监听器（回调方式）
+##### **方案2：通过addListener()添加监听器（回调方式）**
 
 ```java
 ChannelFuture channelFuture = bootstrap().connect(new InetSocketAddress(PORT));
@@ -641,7 +641,7 @@ channelFuture.addListener((ChannelFutureListener) channelFuture1 -> {
 - sync()方式是main线程（主线程），该方式是同步等待结果，所以在主线程打印。
 - addListener()方式是 nioEventLoopGroup-2-1 线程，该方式是在子线程中连接成功后直接运行我们的代码，所以在 nioEventLoopGroup-2-1 线程
 
-### 3.2.2 Channel的关闭
+#### 3.2.2 Channel的关闭
 
 ```java
 NioEventLoopGroup eventLoopGroup = new NioEventLoopGroup();
@@ -681,16 +681,16 @@ log.info("closed");
 
 `[id: 0x3908f889, L:/192.168.123.137:53074 - R:0.0.0.0/0.0.0.0:15218] CLOSE`这行日志代表channel成功关闭
 
-#### 上述代码存在的问题
+##### 上述代码存在的问题
 
 1. 由于客户端关闭是在NioEventLoop线程中进行的，所以主线程中不能正确的执行关闭后的任务
 2. 关闭Channel后进程没有终止
 
-#### 问题1分析
+##### 问题1分析
 
 通过日志我们可以发现`log.info("closed");`执行在channel成功关闭之前，与我们的期望（channel成功关闭后再运行）不一致
 
-#### 问题1的解决方案：closeFuture()
+##### 问题1的解决方案：closeFuture()
 
 通过channel的closeFuture()可以获取关闭channel的ChannelFuture
 
@@ -704,13 +704,13 @@ log.info("closed");
 - connect()的ChannelFuture是关于channel连接成功的
 - closeFuture()的ChannelFuture是关于channel关闭成功的
 
-#### 问题2分析
+##### 问题2分析
 
 除主线程外，每个 **EventLoop 都有自己的线程**，那么当主线程代码执行完成后，由于  **EventLoop 的线程还未结束，所以进程不会结束。**
 
 **只有结束所有的线程，进程才会终止。**
 
-#### 问题2的解决方案
+##### 问题2的解决方案
 
 之前提到过NioEventLoopGroup提供了shutdownGracefully方法用来**停止其包含的所有EventLoop对应的线程**。
 
@@ -762,3 +762,229 @@ eventLoopGroup.shutdownGracefully();
 
 成功解决！
 
+### 3.3 Future&Promise
+
+这是Netty在异步是使用的两个接口
+
+**继承关系图：**
+
+![](./images/Promise-extend.png)
+
+注意：**Netty的Future接口与JDK的Future接口同名**，并且Netty的Future继承了JDK的Future，Promise继承了Netty的Future
+
+整体来说，**这三个接口是用来存储异步任务的结果**
+
+- JDK的Future：必须同步等待任务结束才能获取结果（成功or失败）
+- Netty的Future：增强了JDK的Future，可以同步等待任务结束获取结果，也可以异步等待（Listener）任务获取结果
+- Promise：拥有Netty的Future中所有功能，而且脱离了任务独立存在，作为两个线程（两个任务）间传递结果的容器。
+
+方法的对比
+
+| 功能/名称    | jdk Future                     | netty Future                                                 | Promise      |
+| ------------ | ------------------------------ | ------------------------------------------------------------ | ------------ |
+| cancel       | 取消任务                       | 继承                                                         | 继承         |
+| isCanceled   | 任务是否取消                   | 继承                                                         | 继承         |
+| isDone       | 任务是否完成，不能区分成功失败 | 继承                                                         | 继承         |
+| get          | 获取任务结果，阻塞等待         | 继承                                                         | 继承         |
+| getNow       | -                              | 获取任务结果，非阻塞，还未产生结果时返回 null                | 继承         |
+| await        | -                              | 等待任务结束，如果任务失败，不会抛异常，而是通过 isSuccess 判断 | 继承         |
+| sync         | -                              | 等待任务结束，如果任务失败，抛出异常                         | 继承         |
+| isSuccess    | -                              | 判断任务是否成功                                             | 继承         |
+| cause        | -                              | 获取失败信息，非阻塞，如果没有失败，返回null                 | 继承         |
+| addLinstener | -                              | 添加回调，异步接收结果                                       | 继承         |
+| setSuccess   | -                              | -                                                            | 设置成功结果 |
+| setFailure   | -                              | -                                                            | 设置失败结果 |
+
+#### JDK的Future示例
+
+```java
+ExecutorService service = Executors.newFixedThreadPool(2);
+Future<Integer> future = service.submit(() -> {
+    log.info("异步线程开始执行");
+    Thread.sleep(1000);
+    log.info("异步线程执行完毕");
+    return 10;
+});
+log.info("主线程处理其他任务");
+//同步阻塞，等待结果
+log.info("等待异步线程结果：{}",future.get());
+log.info("整体程序执行完毕");
+```
+
+[示例代码futureByJdkTest](./netty_demo/src/main/test/top/ersut/netty/FutureAndPromiseTest.java)
+
+控制台打印：
+
+```tex
+2023-06-23 10:07:47 [main] INFO  top.ersut.netty.FutureAndPromiseTest.futureByJdkTest:33 - 主线程处理其他任务
+2023-06-23 10:07:47 [pool-2-thread-1] INFO  top.ersut.netty.FutureAndPromiseTest.lambda$futureByJdkTest$0:28 - 异步线程开始执行
+2023-06-23 10:07:48 [pool-2-thread-1] INFO  top.ersut.netty.FutureAndPromiseTest.lambda$futureByJdkTest$0:30 - 异步线程执行完毕
+2023-06-23 10:07:48 [main] INFO  top.ersut.netty.FutureAndPromiseTest.futureByJdkTest:34 - 等待异步线程结果：10
+2023-06-23 10:07:48 [main] INFO  top.ersut.netty.FutureAndPromiseTest.futureByJdkTest:35 - 整体程序执行完毕
+```
+
+可以看出`future.get()`同步阻塞了主线程，当异步线程结束时`future.get()`获取了其结果。
+
+#### Netty的Future示例
+
+```java
+EventLoopGroup eventLoopGroup = new NioEventLoopGroup(2);
+EventLoop eventLoop = eventLoopGroup.next();
+
+io.netty.util.concurrent.Future future = eventLoop.submit(() -> {
+    log.info("异步线程开始执行");
+    Thread.sleep(1000);
+    log.info("异步线程执行完毕");
+    return 20;
+});
+
+log.info("主线程处理其他任务");
+//同步阻塞，等待结果
+log.info("等待异步线程结果：{}",future.get());
+log.info("整体程序执行完毕");
+```
+
+[示例代码futureGetByNettyTest](./netty_demo/src/main/test/top/ersut/netty/FutureAndPromiseTest.java)
+
+控制台打印：
+
+```tex
+2023-06-23 10:12:24 [nioEventLoopGroup-2-1] INFO  top.ersut.netty.FutureAndPromiseTest.lambda$futureGetByNettyTest$1:49 - 异步线程开始执行
+2023-06-23 10:12:24 [main] INFO  top.ersut.netty.FutureAndPromiseTest.futureGetByNettyTest:55 - 主线程处理其他任务
+2023-06-23 10:12:25 [nioEventLoopGroup-2-1] INFO  top.ersut.netty.FutureAndPromiseTest.lambda$futureGetByNettyTest$1:51 - 异步线程执行完毕
+2023-06-23 10:12:25 [main] INFO  top.ersut.netty.FutureAndPromiseTest.futureGetByNettyTest:56 - 等待异步线程结果：20
+2023-06-23 10:12:25 [main] INFO  top.ersut.netty.FutureAndPromiseTest.futureGetByNettyTest:57 - 整体程序执行完毕
+```
+
+由于Netty的Future继承了JDK的Future，此处`future.get()`与Future(JDK)的作用一致。
+
+**注意**：查看`log.info("等待异步线程结果：{}",future.get());`这行日志的线程是main，所以**处理结果是在主线程中进行的**
+
+#### Future（Netty）的增强功能示例
+
+##### 监听器（异步线程中处理结果）
+
+```java
+EventLoopGroup eventLoopGroup = new NioEventLoopGroup(2);
+EventLoop eventLoop = eventLoopGroup.next();
+
+io.netty.util.concurrent.Future future = eventLoop.submit(() -> {
+    log.info("异步线程开始执行");
+    Thread.sleep(1000);
+    log.info("异步线程执行完毕");
+    return 30;
+});
+
+log.info("主线程处理其他任务");
+future.addListener((GenericFutureListener<? extends io.netty.util.concurrent.Future<Integer>>) (future2) -> {
+    log.info("等待异步线程结果：{}",future2.getNow());
+});
+log.info("关闭EventLoopGroup，并等待任务结束");
+//关闭EventLoopGroup，并等待任务结束
+io.netty.util.concurrent.Future<?> shutdownGracefullyFuture = eventLoopGroup.shutdownGracefully();
+shutdownGracefullyFuture.sync();
+log.info("整体程序执行完毕");
+```
+
+[示例代码futureListenerByNettyTest](./netty_demo/src/main/test/top/ersut/netty/FutureAndPromiseTest.java)
+
+控制台打印：
+
+```TEX
+2023-06-23 10:30:30 [nioEventLoopGroup-2-1] INFO  top.ersut.netty.FutureAndPromiseTest.lambda$futureListenerByNettyTest$2:69 - 异步线程开始执行
+2023-06-23 10:30:30 [main] INFO  top.ersut.netty.FutureAndPromiseTest.futureListenerByNettyTest:75 - 主线程处理其他任务
+2023-06-23 10:30:30 [main] INFO  top.ersut.netty.FutureAndPromiseTest.futureListenerByNettyTest:79 - 关闭EventLoopGroup，并等待任务结束
+2023-06-23 10:30:31 [nioEventLoopGroup-2-1] INFO  top.ersut.netty.FutureAndPromiseTest.lambda$futureListenerByNettyTest$2:71 - 异步线程执行完毕
+2023-06-23 10:30:31 [nioEventLoopGroup-2-1] INFO  top.ersut.netty.FutureAndPromiseTest.lambda$futureListenerByNettyTest$3:77 - 等待异步线程结果：30
+2023-06-23 10:30:33 [main] INFO  top.ersut.netty.FutureAndPromiseTest.futureListenerByNettyTest:83 - 整体程序执行完毕
+```
+
+**Future.getNow()**：同步非阻塞的情况下获取结果
+
+通过日志可以看出`log.info("等待异步线程结果：{}",future2.getNow());`这行日志的线程是nioEventLoopGroup-2-1（即异步线程），与上方**Netty的Future示例**中该行日志所使用线程不一致，所以**处理结果是在异步线程中进行的**
+
+#### Promise示例
+
+```java
+EventLoopGroup eventLoopGroup = new NioEventLoopGroup(2);
+EventLoop eventLoop = eventLoopGroup.next();
+
+Promise<String> promise = new DefaultPromise(eventLoop);//1处
+
+//2除
+promise.addListener((GenericFutureListener<? extends io.netty.util.concurrent.Future<String>>) (future2) -> {
+    if (future2.isSuccess()) {
+        log.info("等待异步线程结果：{}",future2.getNow());
+    } else {
+        log.error("异步线程手动抛出错误",future2.cause());
+    }
+});
+
+eventLoop.execute(() -> {
+    log.info("生成数据，判断是否生成的数大于50");
+    try {
+        Thread.sleep(1000);
+    } catch (InterruptedException e) {
+        promise.setFailure(e);
+    }
+    int random = (int)(Math.random() * 100);
+    if(random > 50){
+        //3处
+        promise.setSuccess("success:"+random);
+    } else {
+        //4处
+        promise.tryFailure(new Exception("error:"+random));
+    }
+    log.info("异步线程执行完毕");
+});
+log.info("主线程处理其他任务");
+log.info("关闭EventLoopGroup，并等待任务结束");
+//关闭EventLoopGroup，并等待任务结束
+io.netty.util.concurrent.Future<?> shutdownGracefullyFuture = eventLoopGroup.shutdownGracefully();
+shutdownGracefullyFuture.sync();
+log.info("整体程序执行完毕");
+```
+
+[示例代码promiseTest](./netty_demo/src/main/test/top/ersut/netty/FutureAndPromiseTest.java)
+
+控制台打印：
+
+- 失败的情况：
+
+```tex
+2023-06-23 11:07:40 [nioEventLoopGroup-2-1] INFO  top.ersut.netty.FutureAndPromiseTest.lambda$promiseTest$5:107 - 生成数据，判断是否生成的数大于50
+2023-06-23 11:07:40 [main] INFO  top.ersut.netty.FutureAndPromiseTest.promiseTest:121 - 主线程处理其他任务
+2023-06-23 11:07:40 [main] INFO  top.ersut.netty.FutureAndPromiseTest.promiseTest:122 - 关闭EventLoopGroup，并等待任务结束
+2023-06-23 11:07:41 [nioEventLoopGroup-2-1] ERROR top.ersut.netty.FutureAndPromiseTest.lambda$promiseTest$4:102 - 异步线程手动抛出错误
+java.lang.Exception: error:38
+	at top.ersut.netty.FutureAndPromiseTest.lambda$promiseTest$5(FutureAndPromiseTest.java:117)
+	at io.netty.util.concurrent.AbstractEventExecutor.safeExecute(AbstractEventExecutor.java:163)
+	at io.netty.util.concurrent.SingleThreadEventExecutor.runAllTasks(SingleThreadEventExecutor.java:416)
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:515)
+	at io.netty.util.concurrent.SingleThreadEventExecutor$5.run(SingleThreadEventExecutor.java:918)
+	at io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74)
+	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30)
+	at java.lang.Thread.run(Thread.java:745)
+2023-06-23 11:07:41 [nioEventLoopGroup-2-1] INFO  top.ersut.netty.FutureAndPromiseTest.lambda$promiseTest$5:119 - 异步线程执行完毕
+2023-06-23 11:07:43 [main] INFO  top.ersut.netty.FutureAndPromiseTest.promiseTest:126 - 整体程序执行完毕
+```
+
+- 成功的情况：
+
+```tex
+2023-06-23 11:09:17 [nioEventLoopGroup-2-1] INFO  top.ersut.netty.FutureAndPromiseTest.lambda$promiseTest$5:107 - 生成数据，判断是否生成的数大于50
+2023-06-23 11:09:17 [main] INFO  top.ersut.netty.FutureAndPromiseTest.promiseTest:121 - 主线程处理其他任务
+2023-06-23 11:09:17 [main] INFO  top.ersut.netty.FutureAndPromiseTest.promiseTest:122 - 关闭EventLoopGroup，并等待任务结束
+2023-06-23 11:09:18 [nioEventLoopGroup-2-1] INFO  top.ersut.netty.FutureAndPromiseTest.lambda$promiseTest$4:100 - 等待异步线程结果：success:88
+2023-06-23 11:09:18 [nioEventLoopGroup-2-1] INFO  top.ersut.netty.FutureAndPromiseTest.lambda$promiseTest$5:119 - 异步线程执行完毕
+2023-06-23 11:09:20 [main] INFO  top.ersut.netty.FutureAndPromiseTest.promiseTest:126 - 整体程序执行完毕
+```
+
+##### 代码分析
+
+Promise是new出来的（1处的代码），所以可以在任务之前添加监听器（2处的代码）。而且它可以由用户指定结果，成功（3处的代码）or失败（处的代码）
+
+##### Promise与future相比
+
+- Promise是可以自己创建的
+- Promise由用户设定结果
