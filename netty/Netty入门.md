@@ -1279,7 +1279,7 @@ private static class StudentInfo{
 
 ##### [客户端代码(clientTest)](./netty_demo/src/main/test/top/ersut/netty/InboundAndOutboundExampleTest.java)：
 
-```json
+```java
 Channel channel = new Bootstrap()
         .group(new NioEventLoopGroup())
         .channel(NioSocketChannel.class)
@@ -1343,7 +1343,7 @@ channel.close().sync();
 
 控制台打印：
 
-```json
+```tex
 2023-06-24 14:28:31 [main] INFO  t.e.n.InboundAndOutboundExampleTest.clientTest:85 - studentInfo:InboundAndOutboundExampleTest.StudentInfo(name=张三, age=18, sex=男)
 2023-06-24 14:28:31 [nioEventLoopGroup-2-1] INFO  t.e.n.InboundAndOutboundExampleTest.write:68 - student json:{"name":"张三","age":18,"sex":"男"}
 2023-06-24 14:28:31 [nioEventLoopGroup-2-1] INFO  t.e.n.InboundAndOutboundExampleTest.write:59 - student base64:eyJuYW1lIjoi5byg5LiJIiwiYWdlIjoxOCwic2V4Ijoi55S3In0=
