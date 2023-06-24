@@ -988,3 +988,421 @@ Promise是new出来的（1处的代码），所以可以在任务之前添加监
 
 - Promise是可以自己创建的
 - Promise由用户设定结果
+
+### 3.4 ChannelHandler & Pipeline
+
+**ChannelHandler**是用来处理channel上的各种事件，分为入站（inbound）和出站（outbound）两种处理器。
+
+- 出站处理器：继承ChannelOutboundHandlerAdapter的子类，用来处理发送的消息即`Channel.writeAndFlush(Object msg)`
+- 入站处理器：继承ChannelInboundHandlerAdapter的子类，用来处理接受到的消息。
+
+**Pipeline**中存储了所有的ChannelHandler，这些ChannelHandler是串起来（双向链表）的
+
+- Pipeline在创建的时候添加了两个默认处理器（head、tail），head在最前，tail在最尾部，这两个的位置不受新处理器的影响
+
+#### Pipeline添加处理器的方法
+
+| 方法                                                         | 描述                                                         |
+| ------------------------------------------------------------ | ------------------------------------------------------------ |
+| addLast(ChannelHandler handler)                              | 在tail处理器前方添加一个处理器                               |
+| addLast(String name,ChannelHandler handler)                  | 在tail处理器前方添加一个自定义名称的处理器                   |
+| addLast(EventExecutorGroup group,String name,ChannelHandler handler) | 在tail处理器前方添加一个自定义名称的处理器,并给处理器指定事件执行组（实现类有：NioEventLoopGroup、DefaultEventLoopGroup） |
+
+#### EmbeddedChannel类
+
+这个类是一个用来测试处理器的类
+
+通过`EmbeddedChannel.pipeline().addxxx(ChannelHandler handler)`添加处理器，此处与正常的Channel一致
+
+##### 入站以及出站的方法
+
+| 方法                      | 描述               |
+| ------------------------- | ------------------ |
+| writeInbound(Object msg)  | 发送入站的测试消息 |
+| readInbound()             | 接收入站消息       |
+| writeOutbound(Object msg) | 发送出站的测试消息 |
+| readOutbound()            | 接收出战消息       |
+
+#### 处理器的顺序
+
+##### 入站处理器顺序
+
+```java
+EmbeddedChannel embeddedChannel = new EmbeddedChannel();
+        embeddedChannel.pipeline()
+                .addLast("inbound-1",new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                        log.info("客户端收到消息：{}",((ByteBuf)msg).toString(StandardCharsets.UTF_8));
+                        log.info("第一个自定义入站处理器:{}",ctx.name());
+                        super.channelRead(ctx, msg);//1处
+                    }
+                })
+                .addLast("inbound-2",new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                        log.info("第二个自定义入站处理器:{}",ctx.name());
+                        super.channelRead(ctx, msg);//2处
+                    }
+                })
+                .addLast("inbound-3",new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                        log.info("第三个自定义入站处理器:{}",ctx.name());
+                        super.channelRead(ctx, msg);//3处
+                    }
+                });
+        embeddedChannel.writeInbound(ByteBufAllocator.DEFAULT.buffer().writeBytes("embeddedChannel-inbound".getBytes(StandardCharsets.UTF_8)));
+```
+
+[示例代码inboundByEmbeddedChannelTest](./netty_demo/src/main/test/top/ersut/netty/InboundAndOutboundTest.java)
+
+当前处理器的存储顺序为 head <---> inbound-1 <---> inbound-2 <---> inbound-3 <---> tail，**<--->代表双向链表**
+
+**1处、2处、3处的`super.channelRead(ctx, msg);`是为了传递数据到下一个处理器，没有这行代码无法执行下一个处理器**
+
+控制台打印：
+
+```tex
+2023-06-24 10:12:38 [main] INFO  t.ersut.netty.InboundAndOutboundTest.channelRead:139 - 客户端收到消息：embeddedChannel-inbound
+2023-06-24 10:12:38 [main] INFO  t.ersut.netty.InboundAndOutboundTest.channelRead:140 - 第一个自定义入站处理器:inbound-1
+2023-06-24 10:12:38 [main] INFO  t.ersut.netty.InboundAndOutboundTest.channelRead:147 - 第二个自定义入站处理器:inbound-2
+2023-06-24 10:12:38 [main] INFO  t.ersut.netty.InboundAndOutboundTest.channelRead:154 - 第三个自定义入站处理器:inbound-3
+```
+
+可以看到，**入站处理器是从head开始找，即从前往后找**
+
+##### 出站处理器顺序
+
+```java
+EmbeddedChannel embeddedChannel = new EmbeddedChannel();
+        embeddedChannel.pipeline()
+                .addLast("outbound-1",new ChannelOutboundHandlerAdapter() {
+                    @Override
+                    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+                        log.info("客户端发送消息：{}",((ByteBuf)msg).toString(StandardCharsets.UTF_8));
+                        log.info("第一个自定义出站处理器:{}",ctx.name());
+                        super.write(ctx, msg, promise);
+                    }
+                })
+                .addLast("outbound-2",new ChannelOutboundHandlerAdapter() {
+                    @Override
+                    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+                        log.info("第二个自定义出站处理器:{}",ctx.name());
+                        super.write(ctx, msg, promise);
+                    }
+                })
+                .addLast("outbound-3",new ChannelOutboundHandlerAdapter() {
+                    @Override
+                    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+                        log.info("第三个自定义出站处理器:{}",ctx.name());
+                        super.write(ctx, msg, promise);
+                    }
+                });
+        embeddedChannel.writeOutbound(ByteBufAllocator.DEFAULT.buffer().writeBytes("embeddedChannel-outbound".getBytes(StandardCharsets.UTF_8)));
+```
+
+[示例代码outboundByEmbeddedChannelTest](./netty_demo/src/main/test/top/ersut/netty/InboundAndOutboundTest.java)
+
+当前处理器的存储顺序为 head <---> outbound-1 <---> outbound-2 <---> outbound-3 <---> tail
+
+控制台打印：
+
+```tex
+2023-06-24 10:14:38 [main] INFO  t.ersut.netty.InboundAndOutboundTest.write:184 - 第三个自定义出站处理器:outbound-3
+2023-06-24 10:14:38 [main] INFO  t.ersut.netty.InboundAndOutboundTest.write:177 - 第二个自定义出站处理器:outbound-2
+2023-06-24 10:14:38 [main] INFO  t.ersut.netty.InboundAndOutboundTest.write:169 - 客户端发送消息：embeddedChannel-outbound
+2023-06-24 10:14:38 [main] INFO  t.ersut.netty.InboundAndOutboundTest.write:170 - 第一个自定义出站处理器:outbound-1
+```
+
+**与入站处理器的顺序不同，出站处理器的顺序是从tail往前开始找，即从后往前找**
+
+##### 总结
+
+- Pipeline中的ChannelInboundHandlerAdapter是正序执行的
+- Pipeline中的ChannelOutboundHandlerAdapter是倒序执行的
+
+#### Pipeline中的处理器是如何组成双向链表的
+
+##### 查看`addLast`的源码
+
+DefaultChannelPipeline中部分源码
+
+```java
+public class DefaultChannelPipeline implements ChannelPipeline {
+	...
+        
+    public final ChannelPipeline addLast(EventExecutorGroup group, String name, ChannelHandler handler) {
+        final AbstractChannelHandlerContext newCtx;
+        ...
+        //将ChannelHandler包装为AbstractChannelHandlerContext
+        newCtx = newContext(group, filterName(name, handler), handler);
+        //处理新的AbstractChannelHandlerContext中的双向链表
+        addLast0(newCtx);
+        ...
+    }
+    
+    ...
+        
+}
+```
+
+##### 为什么要包装ChannelHandler？
+
+因为通过AbstractChannelHandlerContext维护的双向链表
+
+看`newCtx = newContext(group, filterName(name, handler), handler);`的源码
+
+```java
+public class DefaultChannelPipeline implements ChannelPipeline {
+	...
+	
+    private AbstractChannelHandlerContext newContext(EventExecutorGroup group, String name, ChannelHandler handler) {
+        return new DefaultChannelHandlerContext(this, childExecutor(group), name, handler);
+    }
+    
+    ...
+}
+```
+
+DefaultChannelHandlerContext类的继承关系
+
+![](./images/DefaultChannelHandlerContext-extend.png)
+
+查看AbstractChannelHandlerContext部分源码：
+
+```java
+abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, ResourceLeakHint {
+    ...
+    
+    //上一个AbstractChannelHandlerContext
+    volatile AbstractChannelHandlerContext next;
+    //下一个AbstractChannelHandlerContext
+    volatile AbstractChannelHandlerContext prev;
+    
+    ...
+}
+```
+
+通过这两个属性维护的双向链表
+
+##### 如何证明是通过next、prev维护的链表？
+
+继续查看`addLast`方法中的`addLast0`方法的源码
+
+```java
+public class DefaultChannelPipeline implements ChannelPipeline {
+    ...
+        
+    //默认的两个处理器
+    final AbstractChannelHandlerContext head;
+    final AbstractChannelHandlerContext tail;
+    
+    ...
+        
+    protected DefaultChannelPipeline(Channel channel) {
+        ...
+        //初始化默认处理器
+        tail = new TailContext(this);
+        head = new HeadContext(this);
+        //维护双向链表
+        head.next = tail;
+        tail.prev = head;
+    }
+    
+    ...
+         
+    private void addLast0(AbstractChannelHandlerContext newCtx) {
+        //当前处理器的顺序 head <---> ... <---> tail
+        AbstractChannelHandlerContext prev = tail.prev;
+        newCtx.prev = prev;
+        newCtx.next = tail;
+        prev.next = newCtx;
+        tail.prev = newCtx;
+        //经过上边代码后处理器的顺序 head <---> ... <---> newCtx <---> tail
+    }
+    
+    ...
+}
+```
+
+代码图解：
+
+![](./images/handlerDoublyLinkedList.png)
+
+通过图解可以看到通过 **处理器上下文 中的next、prev属性实现的双向链表**，另外`addLast0`是**将处理器添加在tail处理器之前，并不是真正的尾部**
+
+##### 总结
+
+1. 在创建Pipeline时，创建了默认的两个处理器，head以及tail，head在最前，tail在最尾部，并且位置不会改变
+2. 通过将处理器（ChannelHandler）包装为 处理器上文（AbstractChannelHandlerContext），设置其next、prev属性实现的双向链表
+
+#### 实际应用
+
+##### 需求
+
+将学生信息转换为json并使用Base64进行加密，发送给服务端；服务端解析数据，最终包装成学生信息
+
+学生信息：
+
+| 字段 | 内容 |
+| ---- | ---- |
+| name | 张三 |
+| age  | 18   |
+| sex  | 男   |
+
+#### 解析需求
+
+客户端发送数据：
+
+1. 学生信息实体转json（第一个出站处理器）
+2. json转Base64（第二个出站处理器）
+
+服务端接收数据：
+
+1. 接收到Base64数据转换为Json
+2. Json转换为学生信息实体
+
+#### 代码
+
+学生信息实体：
+
+```java
+@Data
+@Builder
+private static class StudentInfo{
+    private String name;
+    private int age;
+    private String sex;
+}
+```
+
+##### [客户端代码(clientTest)](./netty_demo/src/main/test/top/ersut/netty/InboundAndOutboundExampleTest.java)：
+
+```json
+Channel channel = new Bootstrap()
+        .group(new NioEventLoopGroup())
+        .channel(NioSocketChannel.class)
+        .handler(new ChannelInitializer<NioSocketChannel>() {
+            @Override
+            protected void initChannel(NioSocketChannel ch) {
+                ch.pipeline()
+                        .addLast("outbound-3",new ChannelOutboundHandlerAdapter() {
+                            //转换为ByteBuf，因为发送的数据必须是ByteBuf类型
+                            @Override
+                            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+                                String base64 = (String) msg;
+                                ByteBuf byteBuf = ByteBufAllocator.DEFAULT.buffer().writeBytes(base64.getBytes(StandardCharsets.UTF_8));
+                                super.write(ctx, byteBuf , promise);
+                            }
+                        })
+                        .addLast("outbound-2",new ChannelOutboundHandlerAdapter() {
+                            //json转base64
+                            @Override
+                            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+                                String str = (String) msg;
+                                String encode = Base64.encode(str);
+                                log.info("student base64:{}",encode);
+                                super.write(ctx, encode, promise);
+                            }
+                        })
+                        .addLast("outbound-1",new ChannelOutboundHandlerAdapter() {
+                            //实体转json
+                            @Override
+                            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+                                StudentInfo studentInfo = (StudentInfo) msg;
+                                String jsonStr = JSONUtil.toJsonStr(studentInfo);
+                                log.info("student json:{}",jsonStr);
+                                super.write(ctx, jsonStr, promise);
+                            }
+                        });
+            }
+        })
+        .connect(new InetSocketAddress(PORT))
+        .sync()
+        .channel();
+
+
+StudentInfo studentInfo = StudentInfo
+        .builder()
+        .name("张三")
+        .sex("男")
+        .age(18)
+        .build();
+log.info("studentInfo:{}",studentInfo);
+channel.writeAndFlush(studentInfo).sync();
+
+channel.close().sync();
+```
+
+使用了3个出站处理器
+
+1. 学生实体转换json的出站处理器
+2. json转换Base64的出站处理器
+3. Base64转换为ByteBuf的出站处理器，之所以需要这个处理器是因为**发送的数据必须是ByteBuf类型**
+
+控制台打印：
+
+```json
+2023-06-24 14:28:31 [main] INFO  t.e.n.InboundAndOutboundExampleTest.clientTest:85 - studentInfo:InboundAndOutboundExampleTest.StudentInfo(name=张三, age=18, sex=男)
+2023-06-24 14:28:31 [nioEventLoopGroup-2-1] INFO  t.e.n.InboundAndOutboundExampleTest.write:68 - student json:{"name":"张三","age":18,"sex":"男"}
+2023-06-24 14:28:31 [nioEventLoopGroup-2-1] INFO  t.e.n.InboundAndOutboundExampleTest.write:59 - student base64:eyJuYW1lIjoi5byg5LiJIiwiYWdlIjoxOCwic2V4Ijoi55S3In0=
+```
+
+##### [服务端代码(main)](./netty_demo/src/main/test/top/ersut/netty/InboundAndOutboundExampleTest.java)：
+
+```java
+new ServerBootstrap()
+    .group(new NioEventLoopGroup())
+    .channel(NioServerSocketChannel.class)
+    .childHandler(new ChannelInitializer<NioSocketChannel>() {
+        @Override
+        protected void initChannel(NioSocketChannel ch) throws Exception {
+            ch.pipeline()
+                    .addLast("inbound-1",new ChannelInboundHandlerAdapter(){
+                        @Override
+                        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                            ByteBuf byteBuf = (ByteBuf) msg;
+                            log.info("msg byteBuf:{}",byteBuf);
+                            String base64 = byteBuf.toString(StandardCharsets.UTF_8);
+                            super.channelRead(ctx, base64);
+                        }
+                    })
+                    .addLast("inbound-2",new ChannelInboundHandlerAdapter(){
+                        @Override
+                        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                            String base64 = (String) msg;
+                            log.info("msg base64:{}",base64);
+                            String json = Base64.decodeStr(base64);
+                            super.channelRead(ctx, json);
+                        }
+                    })
+                    .addLast("inbound-3",new ChannelInboundHandlerAdapter(){
+                        @Override
+                        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                            String json = (String) msg;
+                            log.info("msg json:{}",json);
+                            StudentInfo studentInfo = JSONUtil.toBean(json, StudentInfo.class);
+                            log.info("studentInfo:{}",studentInfo);
+                            super.channelRead(ctx, studentInfo);
+                        }
+                    });
+        }
+    })
+    .bind(PORT);
+```
+
+**使用了3个入站处理器**
+
+1. **ByteBuf转字符串的入站处理器**
+2. **Base64转json的入站处理器**
+3. **json转学生实体的入站处理器**
+
+控制台打印：
+
+```tex
+2023-06-24 14:28:31 [nioEventLoopGroup-2-4] INFO  t.e.n.InboundAndOutboundExampleTest.channelRead:109 - msg byteBuf:PooledUnsafeDirectByteBuf(ridx: 0, widx: 52, cap: 1024)
+2023-06-24 14:28:31 [nioEventLoopGroup-2-4] INFO  t.e.n.InboundAndOutboundExampleTest.channelRead:118 - msg base64:eyJuYW1lIjoi5byg5LiJIiwiYWdlIjoxOCwic2V4Ijoi55S3In0=
+2023-06-24 14:28:31 [nioEventLoopGroup-2-4] INFO  t.e.n.InboundAndOutboundExampleTest.channelRead:127 - msg json:{"name":"张三","age":18,"sex":"男"}
+2023-06-24 14:28:31 [nioEventLoopGroup-2-4] INFO  t.e.n.InboundAndOutboundExampleTest.channelRead:129 - studentInfo:InboundAndOutboundExampleTest.StudentInfo(name=张三, age=18, sex=男)
+```
