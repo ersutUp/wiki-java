@@ -1406,3 +1406,38 @@ new ServerBootstrap()
 2023-06-24 14:28:31 [nioEventLoopGroup-2-4] INFO  t.e.n.InboundAndOutboundExampleTest.channelRead:127 - msg json:{"name":"张三","age":18,"sex":"男"}
 2023-06-24 14:28:31 [nioEventLoopGroup-2-4] INFO  t.e.n.InboundAndOutboundExampleTest.channelRead:129 - studentInfo:InboundAndOutboundExampleTest.StudentInfo(name=张三, age=18, sex=男)
 ```
+
+### 3.5 ByteBuf
+
+#### 3.5.1 基础使用
+
+ByteBuf是JDK的ByteBuffer的增强，它也**支持两种创建方式：直接在内存中创建、在堆中创建**，它支持自动扩容、同时读写（避免了ByteBuffer切换模式的麻烦）
+
+##### 创建
+
+```java
+//创建在堆内存
+ByteBuf heapBuffer = ByteBufAllocator.DEFAULT.heapBuffer();
+//创建在主存（内存）
+ByteBuf directBuffer = ByteBufAllocator.DEFAULT.directBuffer();
+```
+
+**写入数据**
+
+
+
+**读取数据**
+
+
+
+#### 3.5.2 数据结构
+
+
+
+#### 3.5.3 影响创建的属性
+
+##### ByteBuf创建的位置
+
+
+
+##### ByteBufAllocator.DEFAULT.buffer()默认创建的类型
