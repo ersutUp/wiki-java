@@ -1409,28 +1409,122 @@ new ServerBootstrap()
 
 ### 3.5 ByteBuf
 
-#### 3.5.1 基础使用
-
 ByteBuf是JDK的ByteBuffer的增强，它也**支持两种创建方式：直接在内存中创建、在堆中创建**，它支持自动扩容、同时读写（避免了ByteBuffer切换模式的麻烦）
 
-##### 创建
+#### 3.5.1 创建
 
 ```java
-//创建在堆内存
+ByteBuf directBuffer = ByteBufAllocator.DEFAULT.buffer();
+```
+
+##### 环境变量
+
+`-Dio.netty.noPreferDirect`
+
+- true：不适用直接内存
+  - [示例代码#createByteBufNoPreferDirectTest](netty_demo/src/main/test/top/ersut/netty/ByteBufTest.java)
+- false（默认值）：使用直接内存
+
+##### 关于安卓端
+
+安卓端不支持直接内存
+
+[示例代码#createByteBufInAndroidTest](netty_demo/src/main/test/top/ersut/netty/ByteBufTest.java)
+
+#### 3.5.2 直接内存、堆内存的优缺点
+
+##### 堆内存
+
+以下代码可以创建一个堆内存的ByteBuf
+
+```java
 ByteBuf heapBuffer = ByteBufAllocator.DEFAULT.heapBuffer();
-//创建在主存（内存）
+```
+
+缺点：
+
+- 读写效率低，因为在堆内存中使用时需要复制到主存中
+- 另外受GC影响会进行复制等
+
+##### 直接内存
+
+以下代码可以创建一个直接内存的ByteBuf
+
+```java
 ByteBuf directBuffer = ByteBufAllocator.DEFAULT.directBuffer();
 ```
 
-**写入数据**
+优点：
 
+- 读写效率高，由于在主存中直接创建，省去了堆内存复制到主存的步骤
+- 因为不受GC管理，所以减轻GC的压力
 
+缺点：
+
+- 创建和销毁代价大，需要配合池化功能使用
+- 操作不当可能引起内存溢gggna出，因为不受GC的管理，要及时清理
+
+#### 3.5.3 池化
+
+池化的意义是重复使用ByteBuf
+
+- 没有池化，那每次都需要创建新的ByteBuf实例，对于直接内存来说创建和销毁的代价很大；并且高并发时容易内存溢出。
+- 使用池化可以重用ByteBuf的实例，减少了内存溢出的可能。
+
+##### 环境变量
+
+`-Dio.netty.allocator.type`
+
+- pooled：启用池化功能
+- unpooled：关闭池化功能
+  - [示例代码#createByteBufUnpooledTest](netty_demo/src/main/test/top/ersut/netty/ByteBufTest.java)
+
+**windows和Linux默认启用池化功能**
+
+[示例代码#createByteBufNotAndroidTest](netty_demo/src/main/test/top/ersut/netty/ByteBufTest.java)
+
+**安卓端默认关闭池化功能**
+
+[示例代码#createByteBufInAndroidTest](netty_demo/src/main/test/top/ersut/netty/ByteBufTest.java)
+
+#### 3.5.4 结构
+
+ByteBuf由4部分组成
+
+![](images/0010.png)
+
+##### ByteBuf重要的4个属性
+
+- readIndex：读索引，最开始值是0
+- writeIndex：写索引，最开始值是0
+- capacity：目前容量，默认10
+- maxCapcity：最大容量
+
+#### 3.5.5 写入数据
+
+```java
+//创建byteBuf
+ByteBuf buffer = ByteBufAllocator.DEFAULT.buffer();
+
+//写入数据
+buffer.writeCharSequence("写入数据",StandardCharsets.UTF_8);
+```
 
 **读取数据**
 
+```java
+//获取写索引、读索引
+int i = buffer.writerIndex();
+int i1 = buffer.readerIndex()
 
+//读取数据
+byte[] read = new byte[i-i1];
+buffer.readBytes(read);
 
-#### 3.5.2 数据结构
+String str = new String(read, StandardCharsets.UTF_8);
+```
+
+#### 
 
 
 

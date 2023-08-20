@@ -10,6 +10,9 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.theories.suppliers.TestedOn;
 
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+
 @Slf4j
 public class ByteBufTest {
     @Setter
@@ -102,6 +105,26 @@ public class ByteBufTest {
         log.info("buffer(),default class:[{}]",buffer);
     }
 
+
+    @Test
+    public void witerAndReadTest() {
+        //创建byteBuf
+        ByteBuf buffer = ByteBufAllocator.DEFAULT.buffer();
+
+        //写入数据
+        buffer.writeCharSequence("写入数据",StandardCharsets.UTF_8);
+
+        //获取写索引、读索引
+        int i = buffer.writerIndex();
+        int i1 = buffer.readerIndex();
+
+        //读取数据
+        byte[] read = new byte[i-i1];
+        buffer.readBytes(read);
+
+        String str = new String(read, StandardCharsets.UTF_8);
+        log.info(str);
+    }
 
 
 
