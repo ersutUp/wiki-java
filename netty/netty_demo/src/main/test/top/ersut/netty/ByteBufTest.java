@@ -126,6 +126,27 @@ public class ByteBufTest {
         log.info(str);
     }
 
+    @Test
+    public void markTest() {
+        //创建byteBuf
+        ByteBuf buffer = ByteBufAllocator.DEFAULT.buffer();
+        log.info(buffer.writerIndex()+","+buffer.readerIndex());
+        //写入数据
+        buffer.writeCharSequence("abcd",StandardCharsets.UTF_8);
+
+        CharSequence charSequence = buffer.readCharSequence(1, StandardCharsets.UTF_8);
+        log.info("读取第一个字节："+charSequence.toString());
+
+        //标记读索引
+        buffer.markReaderIndex();
+        for (int i = 0; i < 5; i++) {
+            //重置读索引到标记位
+            buffer.resetReaderIndex();
+            log.info("读取第二个字节："+buffer.readCharSequence(1, StandardCharsets.UTF_8));
+        }
+        log.info("读取第三四个字节："+buffer.readCharSequence(2, StandardCharsets.UTF_8));
+    }
+
 
 
 }

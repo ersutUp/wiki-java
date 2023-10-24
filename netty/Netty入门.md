@@ -1413,6 +1413,8 @@ ByteBuf是JDK的ByteBuffer的增强，它也**支持两种创建方式：直接�
 
 #### 3.5.1 创建
 
+以下代码是创建一个ByteBuf，**根据运行系统和`-Dio.netty.noPreferDirect`环境变量来决定创建在堆内存还是直接内存**
+
 ```java
 ByteBuf directBuffer = ByteBufAllocator.DEFAULT.buffer();
 ```
@@ -1421,7 +1423,7 @@ ByteBuf directBuffer = ByteBufAllocator.DEFAULT.buffer();
 
 `-Dio.netty.noPreferDirect`
 
-- true：不适用直接内存
+- true：不使用直接内存
   - [示例代码#createByteBufNoPreferDirectTest](netty_demo/src/main/test/top/ersut/netty/ByteBufTest.java)
 - false（默认值）：使用直接内存
 
@@ -1495,8 +1497,8 @@ ByteBuf由4部分组成
 
 ##### ByteBuf重要的4个属性
 
-- readIndex：读索引，最开始值是0
-- writeIndex：写索引，最开始值是0
+- readIndex：读索引，初始值是0
+- writeIndex：写索引，初始值是0
 - capacity：目前容量，默认10
 - maxCapcity：最大容量
 
@@ -1510,7 +1512,25 @@ ByteBuf buffer = ByteBufAllocator.DEFAULT.buffer();
 buffer.writeCharSequence("写入数据",StandardCharsets.UTF_8);
 ```
 
-**读取数据**
+常用的写入方法
+
+| 方法签名                                                     | 含义                   | 备注                                                         |
+| ------------------------------------------------------------ | ---------------------- | ------------------------------------------------------------ |
+| writeBoolean(boolean value)                                  | 写入 boolean 值        | 用一字节 01\|00 代表 true\|false                             |
+| writeByte(int value)                                         | 写入 byte 值           |                                                              |
+| writeShort(int value)                                        | 写入 short 值          |                                                              |
+| writeInt(int value)                                          | 写入 int 值            | 大端字节序（Big-Endian），即 0x250，写入后 00 00 02 50（int占4个字节） |
+| writeIntLE(int value)                                        | 写入 int 值            | 小端字节序（Little-Endian），即 0x250，写入后 50 02 00 00    |
+| writeLong(long value)                                        | 写入 long 值           |                                                              |
+| writeChar(int value)                                         | 写入 char 值           |                                                              |
+| writeFloat(float value)                                      | 写入 float 值          |                                                              |
+| writeDouble(double value)                                    | 写入 double 值         |                                                              |
+| writeBytes(ByteBuf src)                                      | 写入 netty 的 ByteBuf  |                                                              |
+| writeBytes(byte[] src)                                       | 写入 byte[]            |                                                              |
+| writeBytes(ByteBuffer src)                                   | 写入 nio 的 ByteBuffer |                                                              |
+| int writeCharSequence(CharSequence sequence, Charset charset) | 写入字符串             |                                                              |
+
+#### 3.5.6 读取数据
 
 ```java
 //获取写索引、读索引
@@ -1524,14 +1544,36 @@ buffer.readBytes(read);
 String str = new String(read, StandardCharsets.UTF_8);
 ```
 
-#### 
+##### mark标记
 
+写入a、b、c、d
 
+```java
+//创建byteBuf
+ByteBuf buffer = ByteBufAllocator.DEFAULT.buffer();
+log.info(buffer.writerIndex()+","+buffer.readerIndex());
+//写入数据
+buffer.writeCharSequence("abcd",StandardCharsets.UTF_8);
+```
 
-#### 3.5.3 影响创建的属性
+读取 ’a‘
 
-##### ByteBuf创建的位置
+```java
+CharSequence charSequence = buffer.readCharSequence(1, StandardCharsets.UTF_8);
+log.info("读取第一个字节："+charSequence.toString());
+```
 
+使用`markReaderIndex`和`resetReaderIndex`重复读取5次 ’b‘ 
 
+```java
+//标记读索引
+buffer.markReaderIndex();
+for (int i = 0; i < 5; i++) {
+    //重置读索引到标记位
+    buffer.resetReaderIndex();
+    log.info("读取第二个字节："+buffer.readCharSequence(1, StandardCharsets.UTF_8));
+}
+```
 
-##### ByteBufAllocator.DEFAULT.buffer()默认创建的类型
+[示例代码#markTest](netty_demo/src/main/test/top/ersut/netty/ByteBufTest.java)
+
