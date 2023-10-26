@@ -1577,3 +1577,103 @@ for (int i = 0; i < 5; i++) {
 
 [示例代码#markTest](netty_demo/src/main/test/top/ersut/netty/ByteBufTest.java)
 
+#### 3.5.7 内存释放
+
+由于Netty的ByteBuf分为**堆内存**存储和**直接内存**存储，GC不会回收直接内存，所以需要手动清除
+
+- UnpooledDirectByteBuf：在直接内存中，通过Netty设定的规则（释放计数器）释放
+- UnpooledHeapByteBuf：在JVM的堆内存中运行，通过GC回收和释放
+- PooledByteBuf（池化）需要更复杂的逻辑进行释放内存             todo:到底多复杂？
+
+**Netty采用了计数的方式管理内存**，每个ByteBuf都实现了一个`ReferenceCounted`（释放计数器）接口
+
+- 每个ByteBuf对象的初始计数都是1
+- 当调用`release`时计数器减1，当计数器为0时释放内存
+- 当调用`retain`时计数器加1，表示ByteBuf还有持有者在使用
+- 当计数器变为0后，底层内存会释放，对应的ByteBuf对象中的各个方法均无法正常使用
+
+##### ⚠️调用`release`的时机
+
+pipeline存储了所有的处理器，处理器之间会传递ByteBuf，一般规则是**最后使用者调用`release`。**
+
+**注意：因为ByteBuf会在处理器中传递，所以无法使用` try{...}finally{buf.release()}`来处理。**
+
+
+
+**谁是ByteBuf最后使用者？**
+
+当处理器A收的是ByteBuf给处理器B传递的String，那么处理器A就是最后使用者，他应该调用`release`。
+
+**❓假如所有处理器传递的都是ByteBuf，怎么办？**
+
+之前有提到过有两个默认处理器，头部处理器**HeadContext**、尾部处理器**TailContext**，TailContext会对入站消息做保底工作（处理ByteBuf的释放）
+
+**💡TailContext对入站ByteBuf的释放处理**
+
+查看`TailContext`的源码
+
+```java
+public class DefaultChannelPipeline implements ChannelPipeline {
+    final class TailContext extends AbstractChannelHandlerContext implements ChannelInboundHandler {
+        ...
+
+        @Override
+        public void channelRead(ChannelHandlerContext ctx, Object msg) {
+            //1处
+            onUnhandledInboundMessage(ctx, msg);
+        }
+
+        ...
+    }
+  	protected void onUnhandledInboundMessage(ChannelHandlerContext ctx, Object msg) {
+      	//2处
+        onUnhandledInboundMessage(msg);
+        if (logger.isDebugEnabled()) {
+            logger.debug("Discarded message pipeline : {}. Channel : {}.",
+                         ctx.pipeline().names(), ctx.channel());
+        }
+    }
+    protected void onUnhandledInboundMessage(Object msg) {
+        try {
+            logger.debug(
+                    "Discarded inbound message {} that reached at the tail of the pipeline. " +
+                            "Please check your pipeline configuration.", msg);
+        } finally {
+          	//3处
+            ReferenceCountUtil.release(msg);
+        }
+    }
+}
+```
+
+可以看到**`TailContext`是一个入站处理器**，那么需要实现`channelRead`接口
+
+跟着注释查看1处、2处、3处的代码，最后调用`ReferenceCountUtil.release(msg);`，继续跟踪源码
+
+```java
+public final class ReferenceCountUtil {
+  	...
+      
+    public static boolean release(Object msg) {
+      	//4处
+        if (msg instanceof ReferenceCounted) {
+            return ((ReferenceCounted) msg).release();
+        }
+        return false;
+    }
+  
+  	...
+}
+```
+
+查看4处代码msg如果是ByteBuf（ByteBuf实现了ReferenceCounted接口），就调用`release`方法。
+
+**总结**
+
+根据上述源码我们可以看到当`TailContext`处理器接受到的还是ByteBuf他会进行`release`操作。
+
+
+
+**💡HeadContext对出站ByteBuf的释放处理**
+
+应该是 io.netty.channel.Channel#flush 做的释放处理
