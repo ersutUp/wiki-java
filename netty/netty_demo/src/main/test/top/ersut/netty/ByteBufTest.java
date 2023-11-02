@@ -2,6 +2,7 @@ package top.ersut.netty;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.DuplicatedByteBuf;
 import io.netty.util.collection.ByteCollections;
 import io.netty.util.internal.SystemPropertyUtil;
 import lombok.Setter;
@@ -192,10 +193,58 @@ public class ByteBufTest {
         }catch (IndexOutOfBoundsException e){
             log.error("索引超出",e);
         }
+    }
+
+    //软拷贝
+    @Test
+    public void duplicate(){
+        ByteBuf buffer = ByteBufAllocator.DEFAULT.buffer(10);
+        buffer.writeBytes(new byte[]{'a','b','c','d','e','f','g','h','i','j',});
+        buffer.markReaderIndex();
+        log.info("原始（buffer）的容量：[{}]，值：[{}]", buffer.capacity(), buffer.readCharSequence(buffer.capacity(), StandardCharsets.UTF_8));
+
+
+        /**
+         * 软拷贝：
+         *      与原始buffer使用同一块内存，并且可以进行扩容
+         *      读写指针是单独的，与原始buffer互不影响
+         *          拷贝时会把原始Buffer读写指针的值拷贝过来
+         */
+        ByteBuf duplicateBuffer = buffer.duplicate();
+
+        //把原始Buffer读写指针的值拷贝过来
+        log.info("--------------读写指针的拷贝----------------");
+        log.info("原始（buffer）的读指针：[{}]，写指针：[{}]", buffer.readerIndex(),buffer.writerIndex());
+        log.info("软拷贝（duplicateBuffer）的读指针：[{}]，写指针：[{}]", duplicateBuffer.readerIndex(),duplicateBuffer.writerIndex());
+
+        //读写指针是单独的，与原始buffer互不影响
+        log.info("---------与原始Buffer的指针互不影响----------------");
+        duplicateBuffer.readerIndex(0);
+        duplicateBuffer.markReaderIndex();
+        log.info("原始（buffer）的读指针：[{}]，写指针：[{}]", buffer.readerIndex(),buffer.writerIndex());
+        log.info("软拷贝（duplicateBuffer）的读指针：[{}]，写指针：[{}]", duplicateBuffer.readerIndex(),duplicateBuffer.writerIndex());
+
+        log.info("软拷贝（duplicateBuffer）的容量：[{}]，值：[{}]", duplicateBuffer.capacity(), duplicateBuffer.readCharSequence(duplicateBuffer.capacity(), StandardCharsets.UTF_8));
+
+        buffer.resetReaderIndex();
+        duplicateBuffer.resetReaderIndex();
+        //与原始buffer使用同一块内存，并且可以进行扩容
+        log.info("---------与原始Buffer使用同一块缓存----------------");
+        buffer.setByte(0,'x');
+        duplicateBuffer.setByte(1,'y');
+        log.info("原始（buffer）的容量：[{}]，值：[{}]", buffer.capacity(), buffer.readCharSequence(buffer.capacity(), StandardCharsets.UTF_8));
+        log.info("软拷贝（duplicateBuffer）的容量：[{}]，值：[{}]", duplicateBuffer.capacity(), duplicateBuffer.readCharSequence(duplicateBuffer.capacity(), StandardCharsets.UTF_8));
+
+
+        buffer.resetReaderIndex();
+        duplicateBuffer.resetReaderIndex();
+        log.info("---------软拷贝中进行扩容----------------");
+        duplicateBuffer.writeByte('k');
+        log.info("原始（buffer）的容量：[{}]，值：[{}]", buffer.capacity(), buffer.readCharSequence(buffer.capacity(), StandardCharsets.UTF_8));
+        log.info("软拷贝（duplicateBuffer）的容量：[{}]，值：[{}]", duplicateBuffer.capacity(), duplicateBuffer.readCharSequence(duplicateBuffer.capacity(), StandardCharsets.UTF_8));
 
 
     }
-
 
 
 }
