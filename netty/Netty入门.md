@@ -1677,3 +1677,121 @@ public final class ReferenceCountUtil {
 **💡HeadContext对出站ByteBuf的释放处理**
 
 应该是 io.netty.channel.Channel#flush 做的释放处理
+
+#### 3.5.8 ByteBuf的零拷贝
+
+**这里的零拷贝，指的是在逻辑上处理ByteBuf，底层用的还是同一个ByteBuf，这样可以减少ByteBuf的拷贝。**
+
+##### ByteBuf的切片（slice）
+
+在逻辑上实现切片，底层使用同一块内层，减少拷贝。
+
+**切片方法：ByteBuf.slice(int index,int capacity)**
+
+参数
+
+- index：起始索引
+- capacity：切片大小
+
+切片示例代码：
+
+```java
+ByteBuf buffer = ByteBufAllocator.DEFAULT.buffer(10);
+buffer.writeBytes(new byte[]{'a','b','c','d','e','f','g','h','i','j',});
+buffer.markReaderIndex();
+log.info("原始（buffer）的容量：[{}]，值：[{}]", buffer.capacity(), buffer.readCharSequence(buffer.capacity(), StandardCharsets.UTF_8));
+
+//将前五个进行切片
+//参数1：切片的起始位置；参数2：切片的数量
+log.info("--------------将前五个进行切片----------------");
+ByteBuf buffer1 = buffer.slice(0, 5);
+buffer1.markReaderIndex();
+log.info("切片（buffer1）的容量：[{}]，值：[{}]", buffer1.capacity(), buffer1.readCharSequence(buffer1.capacity(), StandardCharsets.UTF_8));
+
+//将后五个进行切片
+log.info("--------------将后五个进行切片----------------");
+ByteBuf buffer2 = buffer.slice(5, 5);
+buffer2.markReaderIndex();
+log.info("切片（buffer2）的容量：[{}]，值：[{}]", buffer2.capacity(), buffer2.readCharSequence(buffer2.capacity(), StandardCharsets.UTF_8));
+```
+
+打印内容：
+
+```tex
+原始（buffer）的容量：[10]，值：[abcdefghij]
+
+--------------将前五个进行切片----------------
+切片（buffer1）的容量：[5]，值：[abcde]
+
+--------------将后五个进行切片----------------
+切片（buffer2）的容量：[5]，值：[fghij]
+```
+
+
+
+**注意事项**
+
+1. 由于切片的ByteBuf与原始的ByteBuf使用的同一块内存，所以写入切片的ByteBuf时原始ByteBuf也会变。
+
+   示例代码：
+
+   ```java
+   buffer.resetReaderIndex();
+   log.info("原始（buffer）的容量：[{}]，值：[{}]", buffer.capacity(), buffer.readCharSequence(buffer.capacity(), StandardCharsets.UTF_8));
+   
+   buffer2.setByte(0,'y');
+   buffer2.resetReaderIndex();
+   log.info("切片（buffer2）的容量：[{}]，值：[{}]", buffer2.capacity(), buffer2.readCharSequence(buffer2.capacity(), StandardCharsets.UTF_8));
+   
+   buffer.resetReaderIndex();
+   log.info("原始（buffer）的容量：[{}]，值：[{}]", buffer.capacity(), buffer.readCharSequence(buffer.capacity(), StandardCharsets.UTF_8));
+   ```
+
+   打印内容：
+
+   ```tex
+   原始（buffer）的容量：[10]，值：[abcdefghij]
+   切片（buffer2）的容量：[5]，值：[yghij]
+   原始（buffer）的容量：[10]，值：[abcdeyghij]
+   ```
+
+   修改buffer2索引0的值为'y'，原始Buffer中索引5的值也跟着改变为了'y'。
+
+   **之所以原始Buffer中是索引5发生变化，是因为buffer2的切片是从原始buffer的索引5，所以buffer2的索引0对应原始Buffer的索引5。**
+
+2. 切片后的ByteBuf会有大小限制，切片时多大就是多大，超出后报错。
+
+   示例代码：
+
+   ```java
+   try {
+       buffer1.setByte(5,'x');
+   }catch (IndexOutOfBoundsException e){
+       log.error("索引超出",e);
+   }
+   ```
+
+   控制台打印：
+
+   ```tex
+   2023-11-02 08:24:41 [main] ERROR top.ersut.netty.ByteBufTest.slice:193 - 索引超出
+   java.lang.IndexOutOfBoundsException: index: 5, length: 1 (expected: range(0, 5))
+   
+   ...
+   
+     at com.intellij.rt.junit.JUnitStarter.main(JUnitStarter.java:55)
+   
+   ```
+
+   
+
+##### ByteBuf的软拷贝（duplicate）
+
+
+
+##### ByteBuf对多个ByteBuf的整合（CompositeByteBuf）
+
+
+
+
+

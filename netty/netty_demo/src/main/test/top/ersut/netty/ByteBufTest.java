@@ -147,6 +147,55 @@ public class ByteBufTest {
         log.info("读取第三四个字节："+buffer.readCharSequence(2, StandardCharsets.UTF_8));
     }
 
+    @Test
+    public void slice(){
+        ByteBuf buffer = ByteBufAllocator.DEFAULT.buffer(10);
+        buffer.writeBytes(new byte[]{'a','b','c','d','e','f','g','h','i','j',});
+        buffer.markReaderIndex();
+        log.info("原始（buffer）的容量：[{}]，值：[{}]", buffer.capacity(), buffer.readCharSequence(buffer.capacity(), StandardCharsets.UTF_8));
+
+        //将前五个进行切片
+        //参数1：切片的起始位置；参数2：切片的数量
+        log.info("--------------将前五个进行切片----------------");
+        ByteBuf buffer1 = buffer.slice(0, 5);
+        buffer1.markReaderIndex();
+        log.info("切片（buffer1）的容量：[{}]，值：[{}]", buffer1.capacity(), buffer1.readCharSequence(buffer1.capacity(), StandardCharsets.UTF_8));
+
+        //将后五个进行切片
+        log.info("--------------将后五个进行切片----------------");
+        ByteBuf buffer2 = buffer.slice(5, 5);
+        buffer2.markReaderIndex();
+        log.info("切片（buffer2）的容量：[{}]，值：[{}]", buffer2.capacity(), buffer2.readCharSequence(buffer2.capacity(), StandardCharsets.UTF_8));
+
+        /**
+         * 注意事项:
+         *      1、由于切片的ByteBuf与原始的ByteBuf使用的同一块内存，所以写入切片的ByteBuf时原始ByteBuf也会变。
+         *      2、切片后的ByteBuf会有大小限制，切片时多大就是多大，超出后报错。
+         */
+        //注意事项1
+        log.info("--------------注意事项1----------------");
+
+        buffer.resetReaderIndex();
+        log.info("原始（buffer）的容量：[{}]，值：[{}]", buffer.capacity(), buffer.readCharSequence(buffer.capacity(), StandardCharsets.UTF_8));
+
+        buffer2.setByte(0,'y');
+        buffer2.resetReaderIndex();
+        log.info("切片（buffer2）的容量：[{}]，值：[{}]", buffer2.capacity(), buffer2.readCharSequence(buffer2.capacity(), StandardCharsets.UTF_8));
+
+        buffer.resetReaderIndex();
+        log.info("原始（buffer）的容量：[{}]，值：[{}]", buffer.capacity(), buffer.readCharSequence(buffer.capacity(), StandardCharsets.UTF_8));
+
+        //注意事项2
+        log.info("--------------注意事项2----------------");
+        try {
+            buffer1.setByte(5,'x');
+        }catch (IndexOutOfBoundsException e){
+            log.error("索引超出",e);
+        }
+
+
+    }
+
 
 
 }
