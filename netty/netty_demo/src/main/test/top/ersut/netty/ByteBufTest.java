@@ -1,7 +1,9 @@
 package top.ersut.netty;
 
+import com.sun.xml.internal.stream.util.BufferAllocator;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.DuplicatedByteBuf;
 import io.netty.util.collection.ByteCollections;
 import io.netty.util.internal.SystemPropertyUtil;
@@ -149,7 +151,7 @@ public class ByteBufTest {
     }
 
     @Test
-    public void slice(){
+    public void sliceTest(){
         ByteBuf buffer = ByteBufAllocator.DEFAULT.buffer(10);
         buffer.writeBytes(new byte[]{'a','b','c','d','e','f','g','h','i','j',});
         buffer.markReaderIndex();
@@ -197,7 +199,7 @@ public class ByteBufTest {
 
     //软拷贝
     @Test
-    public void duplicate(){
+    public void duplicateTest(){
         ByteBuf buffer = ByteBufAllocator.DEFAULT.buffer(10);
         buffer.writeBytes(new byte[]{'a','b','c','d','e','f','g','h','i','j',});
         buffer.markReaderIndex();
@@ -212,7 +214,7 @@ public class ByteBufTest {
          */
         ByteBuf duplicateBuffer = buffer.duplicate();
 
-        //把原始Buffer读写指针的值拷贝过来
+        //创建软拷贝对象是会把原始Buffer读写指针的值拷贝过来
         log.info("--------------读写指针的拷贝----------------");
         log.info("原始（buffer）的读指针：[{}]，写指针：[{}]", buffer.readerIndex(),buffer.writerIndex());
         log.info("软拷贝（duplicateBuffer）的读指针：[{}]，写指针：[{}]", duplicateBuffer.readerIndex(),duplicateBuffer.writerIndex());
@@ -224,7 +226,21 @@ public class ByteBufTest {
         log.info("原始（buffer）的读指针：[{}]，写指针：[{}]", buffer.readerIndex(),buffer.writerIndex());
         log.info("软拷贝（duplicateBuffer）的读指针：[{}]，写指针：[{}]", duplicateBuffer.readerIndex(),duplicateBuffer.writerIndex());
 
+        buffer.readerIndex(5);
+        log.info("原始（buffer）的读指针：[{}]，写指针：[{}]", buffer.readerIndex(),buffer.writerIndex());
+        log.info("软拷贝（duplicateBuffer）的读指针：[{}]，写指针：[{}]", duplicateBuffer.readerIndex(),duplicateBuffer.writerIndex());
+
+
         log.info("软拷贝（duplicateBuffer）的容量：[{}]，值：[{}]", duplicateBuffer.capacity(), duplicateBuffer.readCharSequence(duplicateBuffer.capacity(), StandardCharsets.UTF_8));
+
+        buffer.resetReaderIndex();
+        duplicateBuffer.resetReaderIndex();
+        log.info("---------软拷贝中进行扩容----------------");
+        duplicateBuffer.writeByte('k');
+        log.info("原始（buffer）的容量：[{}]，值：[{}]", buffer.capacity(), buffer.readCharSequence(buffer.capacity(), StandardCharsets.UTF_8));
+        log.info("软拷贝（duplicateBuffer）的容量：[{}]，值：[{}]", duplicateBuffer.capacity(), duplicateBuffer.readCharSequence(duplicateBuffer.capacity(), StandardCharsets.UTF_8));
+        log.info("原始（buffer）的读指针：[{}]，写指针：[{}]", buffer.readerIndex(),buffer.writerIndex());
+        log.info("软拷贝（duplicateBuffer）的读指针：[{}]，写指针：[{}]", duplicateBuffer.readerIndex(),duplicateBuffer.writerIndex());
 
         buffer.resetReaderIndex();
         duplicateBuffer.resetReaderIndex();
@@ -234,15 +250,30 @@ public class ByteBufTest {
         duplicateBuffer.setByte(1,'y');
         log.info("原始（buffer）的容量：[{}]，值：[{}]", buffer.capacity(), buffer.readCharSequence(buffer.capacity(), StandardCharsets.UTF_8));
         log.info("软拷贝（duplicateBuffer）的容量：[{}]，值：[{}]", duplicateBuffer.capacity(), duplicateBuffer.readCharSequence(duplicateBuffer.capacity(), StandardCharsets.UTF_8));
+    }
+
+    @Test
+    public void compositeByteBufTest(){
+        ByteBuf buffer1 = ByteBufAllocator.DEFAULT.buffer(5);
+        buffer1.writeBytes(new byte[]{'a','b','c','d'});
+        log.info("buffer1的容量：[{}]，值：[{}]", buffer1.capacity(), buffer1.getCharSequence(0,buffer1.writerIndex(), StandardCharsets.UTF_8));
+
+        ByteBuf buffer2 = ByteBufAllocator.DEFAULT.buffer(5);
+        buffer2.writeBytes(new byte[]{'f','g','h','i','j'});
+        log.info("buffer2的容量：[{}]，值：[{}]", buffer2.capacity(), buffer2.getCharSequence(0,buffer2.writerIndex(), StandardCharsets.UTF_8));
+
+        buffer1.readerIndex(1);
+
+        CompositeByteBuf compositeByteBuf = ByteBufAllocator.DEFAULT.compositeBuffer();
+        //整合ByteBuf
+        compositeByteBuf.addComponents(true,buffer1,buffer2);
+        log.info("compositeByteBuf的容量：[{}]，值：[{}]", compositeByteBuf.capacity(), compositeByteBuf.getCharSequence(0,compositeByteBuf.capacity(), StandardCharsets.UTF_8));
+        log.info("compositeByteBuf的读指针：[{}]，写指针：[{}]", compositeByteBuf.readerIndex(),compositeByteBuf.writerIndex());
 
 
-        buffer.resetReaderIndex();
-        duplicateBuffer.resetReaderIndex();
-        log.info("---------软拷贝中进行扩容----------------");
-        duplicateBuffer.writeByte('k');
-        log.info("原始（buffer）的容量：[{}]，值：[{}]", buffer.capacity(), buffer.readCharSequence(buffer.capacity(), StandardCharsets.UTF_8));
-        log.info("软拷贝（duplicateBuffer）的容量：[{}]，值：[{}]", duplicateBuffer.capacity(), duplicateBuffer.readCharSequence(duplicateBuffer.capacity(), StandardCharsets.UTF_8));
-
+        compositeByteBuf.setByte(1,'x');
+        log.info("compositeByteBuf的容量：[{}]，值：[{}]", compositeByteBuf.capacity(), compositeByteBuf.getCharSequence(0,compositeByteBuf.capacity(), StandardCharsets.UTF_8));
+        log.info("buffer1的容量：[{}]，值：[{}]", buffer1.capacity(), buffer1.getCharSequence(0,buffer1.writerIndex(), StandardCharsets.UTF_8));
 
     }
 

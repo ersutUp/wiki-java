@@ -1693,7 +1693,7 @@ public final class ReferenceCountUtil {
 - index：起始索引
 - capacity：切片大小
 
-切片示例代码：
+[切片示例代码#sliceTest](netty_demo/src/main/test/top/ersut/netty/ByteBufTest.java)
 
 ```java
 ByteBuf buffer = ByteBufAllocator.DEFAULT.buffer(10);
@@ -1733,7 +1733,7 @@ log.info("切片（buffer2）的容量：[{}]，值：[{}]", buffer2.capacity(),
 
 1. 由于切片的ByteBuf与原始的ByteBuf使用的同一块内存，所以写入切片的ByteBuf时原始ByteBuf也会变。
 
-   示例代码：
+   [示例代码#sliceTest](netty_demo/src/main/test/top/ersut/netty/ByteBufTest.java)
 
    ```java
    buffer.resetReaderIndex();
@@ -1761,7 +1761,7 @@ log.info("切片（buffer2）的容量：[{}]，值：[{}]", buffer2.capacity(),
 
 2. 切片后的ByteBuf会有大小限制，切片时多大就是多大，超出后报错。
 
-   示例代码：
+   [示例代码#sliceTest](netty_demo/src/main/test/top/ersut/netty/ByteBufTest.java)
 
    ```java
    try {
@@ -1787,9 +1787,157 @@ log.info("切片（buffer2）的容量：[{}]，值：[{}]", buffer2.capacity(),
 
 ##### ByteBuf的软拷贝（duplicate）
 
+```java
+ByteBuf duplicateBuffer = buffer.duplicate();
+```
+
+软拷贝的对象与原始buffer使用同一块内存，并且**可以进行扩容**（此处与slice不同）；**读写指针是单独的**，与原始buffer互不影响，拷贝时会把原始Buffer读写指针的值拷贝过来。
+
+**软拷贝的读写指针**
+
+创建软拷贝对象是会把原始Buffer读写指针的值拷贝过来
+
+[示例代码#duplicateTest](netty_demo/src/main/test/top/ersut/netty/ByteBufTest.java)
+
+```java
+ByteBuf buffer = ByteBufAllocator.DEFAULT.buffer(10);
+buffer.writeBytes(new byte[]{'a','b','c','d','e','f','g','h','i','j',});
+buffer.markReaderIndex();
+log.info("原始（buffer）的容量：[{}]，值：[{}]", buffer.capacity(), buffer.readCharSequence(buffer.capacity(), StandardCharsets.UTF_8));
+
+ByteBuf duplicateBuffer = buffer.duplicate();
+log.info("原始（buffer）的读指针：[{}]，写指针：[{}]", buffer.readerIndex(),buffer.writerIndex());
+log.info("软拷贝（duplicateBuffer）的读指针：[{}]，写指针：[{}]", duplicateBuffer.readerIndex(),duplicateBuffer.writerIndex());
+
+```
+
+打印内容
+
+```tex
+原始（buffer）的容量：[10]，值：[abcdefghij]
+原始（buffer）的读指针：[10]，写指针：[10]
+软拷贝（duplicateBuffer）的读指针：[10]，写指针：[10]
+```
+
+可以看到软拷贝的buffer读写指针与原始buffer的读写一致。
+
+**读写指针互不影响**
+
+[示例代码#duplicateTest](netty_demo/src/main/test/top/ersut/netty/ByteBufTest.java)
+
+```java
+duplicateBuffer.readerIndex(0);
+log.info("原始（buffer）的读指针：[{}]，写指针：[{}]", buffer.readerIndex(),buffer.writerIndex());
+log.info("软拷贝（duplicateBuffer）的读指针：[{}]，写指针：[{}]", duplicateBuffer.readerIndex(),duplicateBuffer.writerIndex());
+
+buffer.readerIndex(5);
+log.info("原始（buffer）的读指针：[{}]，写指针：[{}]", buffer.readerIndex(),buffer.writerIndex());
+log.info("软拷贝（duplicateBuffer）的读指针：[{}]，写指针：[{}]", duplicateBuffer.readerIndex(),duplicateBuffer.writerIndex());
+```
+
+打印内容：
+
+```tex
+原始（buffer）的读指针：[10]，写指针：[10]
+软拷贝（duplicateBuffer）的读指针：[0]，写指针：[10]
+原始（buffer）的读指针：[5]，写指针：[10]
+软拷贝（duplicateBuffer）的读指针：[0]，写指针：[10]
+```
+
+修改原始buffer的读指针，软拷贝的buffer不受影响；修改软拷贝buffer的读指针，原始buffer的写指针也不受影响；写指针也是这样。
+
+**软拷贝中进行扩容**
+
+[示例代码#duplicateTest](netty_demo/src/main/test/top/ersut/netty/ByteBufTest.java)
+
+```java
+duplicateBuffer.writeByte('k');
+log.info("原始（buffer）的容量：[{}]，值：[{}]", buffer.capacity(), buffer.readCharSequence(buffer.capacity(), StandardCharsets.UTF_8));
+log.info("软拷贝（duplicateBuffer）的容量：[{}]，值：[{}]", duplicateBuffer.capacity(), duplicateBuffer.readCharSequence(duplicateBuffer.capacity(), StandardCharsets.UTF_8));
+log.info("原始（buffer）的读指针：[{}]，写指针：[{}]", buffer.readerIndex(),buffer.writerIndex());
+log.info("软拷贝（duplicateBuffer）的读指针：[{}]，写指针：[{}]", duplicateBuffer.readerIndex(),duplicateBuffer.writerIndex());
+```
+
+打印内容：
+
+```tex
+原始（buffer）的容量：[64]，值：[abcdefghijk]                       
+软拷贝（duplicateBuffer）的容量：[64]，值：[abcdefghijk]                   
+原始（buffer）的读指针：[64]，写指针：[10]
+软拷贝（duplicateBuffer）的读指针：[64]，写指针：[11]
+```
+
+软拷贝写入key时将容量扩大到了64。
+
+##### 对多个ByteBuf的整合（CompositeByteBuf）
+
+CompositeByteBuf将多个ByteBuf通过java对象整合在一起，**底层还是使用的ByteBuf的内存。**
+
+`CompositeByteBuf.addComponents(ByteBuf... buffers)`
+
+参数buffers：可变参，可以填入多个或一个要整合的ByteBuf。
+
+[示例代码#compositeByteBufTest](netty_demo/src/main/test/top/ersut/netty/ByteBufTest.java)
+
+```java
+ByteBuf buffer1 = ByteBufAllocator.DEFAULT.buffer(5);
+buffer1.writeBytes(new byte[]{'a','b','c','d'});
+log.info("buffer1的容量：[{}]，值：[{}]", buffer1.capacity(), buffer1.getCharSequence(0,buffer1.writerIndex(), StandardCharsets.UTF_8));
+
+ByteBuf buffer2 = ByteBufAllocator.DEFAULT.buffer(5);
+buffer2.writeBytes(new byte[]{'f','g','h','i','j'});
+log.info("buffer2的容量：[{}]，值：[{}]", buffer2.capacity(), buffer2.getCharSequence(0,buffer2.writerIndex(), StandardCharsets.UTF_8));
+
+//1处
+buffer1.readerIndex(1);
+
+CompositeByteBuf compositeByteBuf = ByteBufAllocator.DEFAULT.compositeBuffer();
+//整合ByteBuf
+compositeByteBuf.addComponents(buffer1,buffer2);
+log.info("compositeByteBuf的容量：[{}]，值：[{}]", compositeByteBuf.capacity(), compositeByteBuf.getCharSequence(0,compositeByteBuf.capacity(), StandardCharsets.UTF_8));
+log.info("compositeByteBuf的读指针：[{}]，写指针：[{}]", compositeByteBuf.readerIndex(),compositeByteBuf.writerIndex());
+```
+
+打印内容：
+
+```tex
+buffer1的容量：[5]，值：[abcd]
+buffer2的容量：[5]，值：[fghij]
+compositeByteBuf的容量：[8]，值：[bcdfghij]
+compositeByteBuf的读指针：[0]，写指针：[0]
+```
+
+compositeByteBuf并没有将buffer1的所有值整合过来，是因为在1处修改了读指针，所以CompositeByteBuf在整合Buffer时是从其**读指针的位置开始到写指针的位置结束**。
+
+观察compositeByteBuf对象的写指针，并没有跟着写入而递增。
+
+**CompositeByteBuf对象递增写指针**
+
+`CompositeByteBuf.addComponents(boolean increaseWriterIndex, ByteBuf... buffers)`
+
+参数：
+
+- increaseWriterIndex：是否增长写指针
+- buffers：可变参，可以填入多个或一个要整合的ByteBuf。
+
+[示例代码#compositeByteBufTest](netty_demo/src/main/test/top/ersut/netty/ByteBufTest.java)
+
+```java
+compositeByteBuf.addComponents(true,buffer1,buffer2);
+log.info("compositeByteBuf的容量：[{}]，值：[{}]", compositeByteBuf.capacity(), compositeByteBuf.getCharSequence(0,compositeByteBuf.capacity(), StandardCharsets.UTF_8));
+log.info("compositeByteBuf的读指针：[{}]，写指针：[{}]", compositeByteBuf.readerIndex(),compositeByteBuf.writerIndex());
+```
+
+控制台打印：
+
+```java
+compositeByteBuf的容量：[8]，值：[bcdfghij]
+compositeByteBuf的读指针：[0]，写指针：[8]
+```
+
+写指针增长了
 
 
-##### ByteBuf对多个ByteBuf的整合（CompositeByteBuf）
 
 
 
