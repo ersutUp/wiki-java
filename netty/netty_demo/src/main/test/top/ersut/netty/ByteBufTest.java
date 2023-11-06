@@ -1,10 +1,7 @@
 package top.ersut.netty;
 
 import com.sun.xml.internal.stream.util.BufferAllocator;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.CompositeByteBuf;
-import io.netty.buffer.DuplicatedByteBuf;
+import io.netty.buffer.*;
 import io.netty.util.collection.ByteCollections;
 import io.netty.util.internal.SystemPropertyUtil;
 import lombok.Setter;
@@ -276,6 +273,7 @@ public class ByteBufTest {
         log.info("buffer1的容量：[{}]，值：[{}]", buffer1.capacity(), buffer1.getCharSequence(0,buffer1.writerIndex(), StandardCharsets.UTF_8));
 
     }
+
 
 
 }

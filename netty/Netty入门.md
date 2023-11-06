@@ -1937,9 +1937,123 @@ compositeByteBuf的读指针：[0]，写指针：[8]
 
 写指针增长了
 
+#### 💡 ByteBuf 优势
+
+* **可以自动扩容**
+* 池化 - 可以重用池中 ByteBuf 实例，更节约内存，减少内存溢出的可能
+* 读写指针分离，不需要像 ByteBuffer 一样切换读写模式
+* 支持链式调用，使用更流畅
+* 很多地方体现零拷贝，例如 slice、duplicate、CompositeByteBuf
 
 
 
+### 3.6 Demo
+
+#### 3.6.1 回声示例
+
+客户端发送的数据，服务端原样返回。
+
+**[服务端代码](netty_demo/src/main/test/top/ersut/netty/EchoDemoTest.java)：**
+
+```java
+new ServerBootstrap()
+        .group(new NioEventLoopGroup())
+        .channel(NioServerSocketChannel.class)
+        .childHandler(new ChannelInitializer<NioSocketChannel>() {
+            @Override
+            protected void initChannel(NioSocketChannel ch) throws Exception {
+                ch.pipeline().addLast(new ChannelInboundHandlerAdapter(){
+                    @Override
+                    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+
+                        ByteBuf byteBuf = (ByteBuf) msg;
+                        String str = byteBuf.readCharSequence(byteBuf.writerIndex(), StandardCharsets.UTF_8).toString();
+                        log.info("收到消息:[{}]",str);
+
+                        //回传
+                        ByteBuf response = ctx.alloc().buffer();
+                        response.writeCharSequence(str,StandardCharsets.UTF_8);
+                        ctx.writeAndFlush(response);
+                        //变量 response 不需要释放，他会经过一系列出站处理器，由处理器来释放
+
+                        //变量 byteBuf 不需要释放；因为通过 super.channelRead(ctx,msg); 传给了下一个处理器，且下个处理器就是 tail 处理器，他会释放接收到的ByteBuf对象
+                        super.channelRead(ctx,msg);
+                    }
+                });
+
+            }
+        })
+        .bind(PORT);
+```
+
+变量 byteBuf 不需要释放，当最后一个处理器传给 tail 处理器还是ByteBuf类型的话，那 tail 处理器会释放byteBuf。
+
+**[客户端代码](netty_demo/src/main/test/top/ersut/netty/EchoDemoTest.java)：**
+
+```java
+NioEventLoopGroup eventExecutors = new NioEventLoopGroup();
+ChannelFuture channelFuture = new Bootstrap()
+        .group(eventExecutors)
+        .channel(NioSocketChannel.class)
+        .handler(new ChannelInitializer<NioSocketChannel>() {
+            @Override
+            protected void initChannel(NioSocketChannel ch) throws Exception {
+                ch.pipeline().addLast(new ChannelOutboundHandlerAdapter(){
+                    @Override
+                    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+                        String string = (String) msg;
+                        //将String转换为ByteBuf
+                        ByteBuf byteBuf = ctx.alloc().buffer();
+                        byteBuf.writeCharSequence(string,StandardCharsets.UTF_8);
+
+                        super.write(ctx, byteBuf, promise);
+                    }
+                });
+
+                ch.pipeline().addLast(new ChannelInboundHandlerAdapter(){
+                    @Override
+                    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                        ByteBuf byteBuf = (ByteBuf) msg;
+                        String str = byteBuf.readCharSequence(byteBuf.writerIndex(), StandardCharsets.UTF_8).toString();
+                        log.info("response:[{}]",str);
+                        super.channelRead(ctx,msg);
+                    }
+                });
+            }
+        })
+        .connect(new InetSocketAddress(PORT));
+channelFuture.addListener((ChannelFutureListener)(future) -> {
+    log.info("客户端启动成功");
+    new Thread(() -> {
+        Channel channel = channelFuture.channel();
+        Scanner scanner = new Scanner(System.in);
+        while (true){
+            String text = scanner.nextLine();
+            if(Objects.equals(text,"q") || Objects.equals(text,"quit")){
+                channel.close();
+                break;
+            }
+            channel.write(text);
+            channel.flush();
+        }
+    }).start();
+});
+//优雅的关闭客户端
+channelFuture.channel().closeFuture().addListener((ChannelFutureListener)(future) -> {
+    eventExecutors.shutdownGracefully();
+    log.info("客户端已关闭");
+});
+```
+
+控制台打印：
+
+```tex
+2023-11-06 16:27:05 [nioEventLoopGroup-2-1] INFO - 客户端启动成功
+123
+2023-11-06 16:27:27 [nioEventLoopGroup-2-1] INFO - response:[123]
+23
+2023-11-06 16:28:11 [nioEventLoopGroup-2-1] INFO - response:[23]
+```
 
 
 
