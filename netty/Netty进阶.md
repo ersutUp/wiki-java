@@ -8,6 +8,8 @@
 
 ### 1.1 粘包现象&半包现象
 
+[相关代码](./netty_demo/src/main/test/top/ersut/netty/stickhalfpackage/StickHalfPackageTest.java)
+
 **客户端发送数据部分代码：**
 
 ```java
@@ -66,11 +68,95 @@ serverBootstrap.channel(NioServerSocketChannel.class)
 
 ![](./images/StickHalfPackageLog.png)
 
-[相关代码](./netty_demo/src/main/test/top/ersut/netty/stickhalfpackage/StickHalfPackageTest.java)
+#### 1.1.1  现象的原因
+
+##### **应用层**
+
+- **粘包**：接收方设置的ByteBuf 太大（netty默认为1024），即`ChannelOption.RCVBUF_ALLOCATOR`
+
+- **半包**：当接收的数据比设置的ByteBuf 大
+
+
+
+##### 滑动窗口
+
+什么是滑动窗口？
+
+- TCP 每次传输的数据，称为segment（被叫做TCP段），**每发送一个段都需要等待应答（ack）**，这样有个很大的弊端，如果 **TCP段响应的时间越长性能越差**，例如发送5个段，第三个段的ack响应很慢，那这个期间第四五个段还在等待发送，这样大大降低了性能。
+
+  图示：
+
+  ![](images/0049.png)
+
+- 为了解决这个问题，出现了滑动窗口。**滑动窗口中，可以同时发送多条消息（无需等待ack的返回），这样性能大大提升。**
+
+  - **当消息塞满滑动窗口后，其他消息等待发送，**滑动窗口中有消息接收到ack后，窗口继续滑动发送后续的消息。
+  - **接收方也会维护一个窗口，只有落在窗口中的数据才会接收。**
+
+  图示：
+
+  ![](images/0051.png)
+
+- **粘包**：假设一条消息大小为128kb，接收方的滑动窗口还剩余512kb，如果接收方处理的不及时，下一条消息也发送过来了，就会造成粘包。
+
+- **半包**：假设一条消息大小为128kb，接收方窗口只剩余64kb，这时接收方不能完整接收这条消息，只能先接收消息前半部分的64kb，这样就造成了半包。
+
+##### MSS限制
+
+- **链路层对一次能发送的数据大小称为MTU**（Maximum Transmission Unit），不同的链路设备（网卡、交换机、等）MTU值也不同
+
+  - 以太网的MTU值为1500
+  - FDDI（光纤分布式数据接口）的 MTU 是 4352
+  - 回环地址（不走网卡）的MTU一般为65536，我mac电脑为16384
+
+- MSS是最大TCP段的长度，他是**MTU刨去TCP头和ip头后剩余的大小**。
+
+  - ipv4 tcp 头占用 20 bytes，ip 头占用 20 bytes，因此以太网 MSS 的值为 1500 - 40 = 1460
+
+  - 图示
+
+    ![](images/MTU&MSS.png)
+
+- TCP在传输大量数据时会按照MSS的大小对**数据分片发送**，这里会造成半包
+
+  - 图示（假设MSS是80kb）
+
+    ![](images/MSS-section.png)
+
+- 在TCP三次握手时会协商MSS值的大小，在**两者之间选择一个最小值作为MSS**（实际情况下中间还有会路由、交换机设备，会在整个网络设备中选择最小的MSS）
+
+##### Nagle 算法
+
+* 即使发送一个字节，也需要加入 tcp 头和 ip 头，也就是总字节数会使用 41 bytes，非常不经济。因此**为了提高网络利用率，tcp 希望尽可能发送足够大的数据，这就是 Nagle 算法产生的缘由**
+* 该算法是指发送端即使还有应该发送的数据，但如果这部分数据很少的话，则进行延迟发送
+  * 如果 SO_SNDBUF 的数据达到 MSS，则需要发送
+  * 如果 SO_SNDBUF 中含有 FIN（表示需要连接关闭）这时将剩余数据发送，再关闭
+  * 如果 TCP_NODELAY = true，则需要发送
+  * 已发送的数据都收到 ack 时，则需要发送
+  * 上述条件不满足，但发生超时（一般为 200ms）则需要发送
+  * 除上述情况，延迟发送，这就造成了粘包
+
+
+
+##### **粘包**总结
+
+- 应用层：接收方设置的ByteBuf 太大（netty默认为1024），即`ChannelOption.RCVBUF_ALLOCATOR`
+- 滑动窗口：假设一条消息大小为128kb，接收方的滑动窗口还剩余512kb，如果接收方处理的不及时，下一条消息也发送过来了，就会造成粘包。
+- Nagle 算法：延迟发送会造成了粘包
+
+
+
+##### **半包**总结
+
+- 应用层：当接收的数据比设置的ByteBuf 大
+- 滑动窗口：假设一条消息大小为128kb，接收方窗口只剩余64kb，这时接收方不能完整接收这条消息，只能先接收消息前半部分的64kb，这样就造成了半包。
+- MSS限制：TCP在传输大量数据时会按照MSS的大小对**数据分片发送**
+
+
 
 ### 1.2 解决方案 
 
-#### 1.2.1 通过换行符解决粘包半包问题
+#### 1.2.1 行解码器
 
  [相关代码](netty_demo/src/main/test/top/ersut/netty/stickhalfpackage/SolutionByLineTest.java)
 
@@ -176,7 +262,7 @@ try {
 
 
 
-#### 1.2.2 通过长度字段解决粘包半包问题
+#### 1.2.2 LTC解码器
 
 [相关代码](netty_demo/src/main/test/top/ersut/netty/stickhalfpackage/SolutionByLengthFieldTest.java) 
 
