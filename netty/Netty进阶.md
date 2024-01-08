@@ -419,3 +419,73 @@ try {
 **服务端控制台的打印**：
 
 ![](./images/LengthFieldDecode-log.png)
+
+
+
+## 二、协议的编码解码
+
+### 2.1 HTTP的编码和解码 
+
+Netty内置了HTTP的编解码类：`HttpServerCodec`
+
+示例：
+
+```java
+
+serverBootstrap.childHandler(new ChannelInitializer<NioSocketChannel>() {
+    @Override
+    protected void initChannel(NioSocketChannel ch) throws Exception {
+        //http的编解码处理器
+        ch.pipeline().addLast(new HttpServerCodec());
+        //请求内容部分
+        ch.pipeline().addLast(new SimpleChannelInboundHandler<HttpContent>() {
+            @Override
+            protected void channelRead0(ChannelHandlerContext ctx, HttpContent msg) throws Exception {
+                log.info(msg.content().toString(StandardCharsets.UTF_8));
+            }
+        });
+        //SimpleChannelInboundHandler:接受一个泛型，只处理匹配泛型的msg
+        //请求信息部分（请求头、协议版本、等）
+        ch.pipeline().addLast(new SimpleChannelInboundHandler<HttpRequest>() {
+            @Override
+            protected void channelRead0(ChannelHandlerContext ctx, HttpRequest msg) throws Exception {
+                //获取请求路径
+                String uri = msg.uri();
+                log.info("请求路径[{}]",uri);
+                //http的版本
+                HttpVersion httpVersion = msg.protocolVersion();
+
+                //创建响应
+                DefaultFullHttpResponse httpResponse = new DefaultFullHttpResponse(httpVersion,HttpResponseStatus.OK);
+
+                String content = "<h1>请求路径："+uri+"</h1>";
+                byte[] httpContent = content.getBytes(StandardCharsets.UTF_8);
+
+                //响应的Http内容
+                httpResponse.content().writeBytes(httpContent);
+                //设置内容的长度，以便客户端解析
+                httpResponse.headers().setInt(HttpHeaderNames.CONTENT_LENGTH,httpContent.length);
+                //设置编码
+                httpResponse.headers().set(HttpHeaderNames.CONTENT_TYPE, ContentType.TEXT_HTML+";charset="+StandardCharsets.UTF_8);
+
+                //写出数据
+                ctx.writeAndFlush(httpResponse);
+            }
+        });
+    }
+});
+```
+
+这部分代码读取了请求地址，并发送给了客户端。
+
+- `SimpleChannelInboundHandler`：可以指定处理的消息类型，例如处理字符串消息：`new SimpleChannelInboundHandler<String>()`
+
+- `HttpContent`存储了请求内容
+- `HttpRequest`存储了请求信息
+
+![](images/http-request.png)
+
+- `DefaultFullHttpResponse`是创建响应数据类，响应头、状态码、响应内容、等。
+
+### 2.2 自定义协议
+
