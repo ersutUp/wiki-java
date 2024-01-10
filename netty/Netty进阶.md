@@ -489,3 +489,19 @@ serverBootstrap.childHandler(new ChannelInitializer<NioSocketChannel>() {
 
 ### 2.2 自定义协议
 
+#### 2.2.1 自定义协议要素
+
+> 摘抄自：黑马程序员Netty全套教程（BV1py4y1E7oA）
+
+* **魔数**，用来在第一时间判定是否是无效数据包
+* **版本号**，可以支持协议的升级
+* **序列化算法**，消息正文到底采用哪种序列化反序列化方式，可以由此扩展，例如：json、xml
+* **指令（消息）类型**，是登录、注册、单聊、群聊... 跟业务相关
+* **请求序号**，为了双工通信，提供异步能力，例如http中的sessionId
+* 正文长度
+* 消息正文
+
+
+
+`ByteToMessageCodec<T>`类：将ByteBuf转换为对应的泛型。
+
