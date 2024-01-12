@@ -428,6 +428,8 @@ try {
 
 Netty内置了HTTP的编解码类：`HttpServerCodec`
 
+[相关代码](netty_demo/src/main/java/top/ersut/protocol/Http.java)
+
 示例：
 
 ```java

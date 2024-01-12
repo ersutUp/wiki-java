@@ -1,4 +1,4 @@
-package top.ersut.netty.protocol;
+package top.ersut.protocol;
 
 import cn.hutool.http.ContentType;
 import io.netty.bootstrap.ServerBootstrap;
@@ -6,16 +6,13 @@ import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.codec.http.*;
-import io.netty.handler.logging.LogLevel;
-import io.netty.handler.logging.LoggingHandler;
 import lombok.extern.slf4j.Slf4j;
 
 import java.nio.charset.StandardCharsets;
 
 @Slf4j
-public class HttpTest {
+public class Http {
 
     private static final int PROT = 8080;
     public static void main(String[] args) {
