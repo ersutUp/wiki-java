@@ -505,5 +505,152 @@ serverBootstrap.childHandler(new ChannelInitializer<NioSocketChannel>() {
 
 
 
-`ByteToMessageCodec<T>`类：将ByteBuf转换为对应的泛型。
+`ByteToMessageCodec<T>`抽象类：**将ByteBuf转换为对应的泛型。**
 
+- `encode`方法：出站时对数据的**编码**
+- `decode`方法：入站时对数据的**解码**
+
+[示例:](netty_demo/src/main/java/top/ersut/protocol/chat/ChatMessageCustomCodec.java)
+
+```java
+
+@Slf4j
+public class ChatMessageCustomCodec extends ByteToMessageCodec<Message> {
+
+    /**
+     * 出站的编码
+     */
+    @Override
+    public void encode(ChannelHandlerContext ctx, Message msg, ByteBuf out) {
+        //魔数
+        out.writeBytes(new byte[]{1, 2, 3, 4});
+        //版本号
+        out.writeByte(msg.getVersion());
+        //序列化方式
+        out.writeByte(msg.getSerialization().val);
+        //消息类型
+        out.writeByte(msg.getMessageType().val);
+        //序号
+        out.writeInt(msg.getSequenceId());
+
+        //补充字节，消息头部凑齐16字节
+        out.writeByte(0);//1处
+
+        byte msgByte[] = new Gson().toJson(msg).getBytes(StandardCharsets.UTF_8);
+
+        //数据长度
+        int length = msgByte.length;
+        out.writeInt(length);
+
+        //消息内容
+        out.writeBytes(msgByte);
+    }
+
+    /**
+     * 入栈的解码
+     */
+    @Override
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+        //魔数
+        byte magic[] = new byte[4];
+        in.readBytes(magic);
+        //版本号
+        byte version = in.readByte();
+        //序列化方式
+        byte serialization = in.readByte();
+        //消息类型
+        byte msgType = in.readByte();
+        //序号
+        int sequenceId = in.readInt();
+        //补充字节
+        in.readByte();
+
+        //长度
+        int length = in.readInt();
+
+        if (length != 0){
+            byte[] content = new byte[length];
+            in.readBytes(content);
+
+            //根据序列化方式 处理消息内容
+            if(SerializationTypeEnum.JSON.val == serialization){
+                String s = new String(content, StandardCharsets.UTF_8);
+                JsonElement jsonTree = new Gson().toJsonTree(s);
+                log.info("收到数据:[{}]",jsonTree);
+                //将读取的内容传给下一个处理器
+                out.add(jsonTree);
+            }
+        } else {
+            log.info("长度值与数据不匹配");
+        }
+    }
+}
+```
+
+**其中编码的1处是为了将消息的头部数据对齐16个字节**
+
+##### 消息结构的图示：
+
+![](./images/custom-structure.jpg)
+
+[测试类](./netty_demo/src/main/test/top/ersut/netty/protocol/chat/ChatMessageCustomCodecTest.java)：包含了编解码的测试以及半包情况下的测试
+
+**编码测试：**
+
+```java
+@Test
+public void encodeTest(){
+    EmbeddedChannel embeddedChannel = new EmbeddedChannel();
+    embeddedChannel.pipeline().addLast(
+            new LoggingHandler(),
+            new ChatMessageCustomCodec()
+    );
+
+    //encode
+    LoginRequestMessage loginRequestMessage = new LoginRequestMessage("ersut", "123", "王");
+    embeddedChannel.writeOutbound(loginRequestMessage);
+}
+```
+
+控制台打印：
+
+![](./images/custom-message.png)
+
+上图就是**字节数据的打印**
+
+**半包测试：**
+
+```java
+@Test
+public void decodeHalfPackTest(){
+    EmbeddedChannel embeddedChannel = new EmbeddedChannel();
+    embeddedChannel.pipeline().addLast(
+            /** 添加 LengthFieldBasedFrameDecoder 解码器，解决半包粘包问题 */
+            new LengthFieldBasedFrameDecoder(1024,12,4,0,0), //2处
+            new ChatMessageCustomCodec()
+    );
+
+    //要发送的消息
+    ByteBuf sendByteBuf = ByteBufAllocator.DEFAULT.buffer();
+    LoginRequestMessage loginRequestMessage = new LoginRequestMessage("ersut", "123", "王");
+    //将 loginRequestMessage 通过 encode 方法写到 sendByteBuf
+    new ChatMessageCustomCodec().encode(null,loginRequestMessage,sendByteBuf);
+
+    /** 模拟半包 */
+    int firstIndex = 6;
+    ByteBuf byteBuf1 = sendByteBuf.readSlice(firstIndex);
+    //因为分成了两个包并发送两次 每次发送都会执行release 所以这里retain一次
+    sendByteBuf.retain();
+    embeddedChannel.writeInbound(byteBuf1);
+
+    ByteBuf byteBuf2 = sendByteBuf.readSlice(sendByteBuf.writerIndex() - firstIndex);
+    embeddedChannel.writeInbound(byteBuf2);
+
+}
+```
+
+**通过2处的 `LengthFieldBasedFrameDecoder` 处理器解决了半包的问题。**
+
+
+
+魔数 是什么？？？

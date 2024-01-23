@@ -12,6 +12,9 @@ import java.util.List;
 @Slf4j
 public class ChatMessageCustomCodec extends ByteToMessageCodec<Message> {
 
+    /**
+     * 出站的编码
+     */
     @Override
     public void encode(ChannelHandlerContext ctx, Message msg, ByteBuf out) {
         //魔数
@@ -38,6 +41,9 @@ public class ChatMessageCustomCodec extends ByteToMessageCodec<Message> {
         out.writeBytes(msgByte);
     }
 
+    /**
+     * 入栈的解码
+     */
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
         //魔数
