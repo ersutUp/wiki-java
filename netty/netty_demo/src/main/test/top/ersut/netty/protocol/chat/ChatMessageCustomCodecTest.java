@@ -3,6 +3,8 @@ package top.ersut.netty.protocol.chat;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.FixedLengthFrameDecoder;
+import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.logging.LoggingHandler;
 import org.junit.Test;
 import top.ersut.protocol.chat.ChatMessageCustomCodec;
@@ -45,7 +47,8 @@ public class ChatMessageCustomCodecTest {
     public void decodeHalfPackTest(){
         EmbeddedChannel embeddedChannel = new EmbeddedChannel();
         embeddedChannel.pipeline().addLast(
-                //todo 添加处理器
+                /** 添加 LengthFieldBasedFrameDecoder 解码器，解决半包粘包问题 */
+                new LengthFieldBasedFrameDecoder(1024,12,4,0,0),
                 new ChatMessageCustomCodec()
         );
 
@@ -55,8 +58,15 @@ public class ChatMessageCustomCodecTest {
         //将 loginRequestMessage 通过 encode 方法写到 sendByteBuf
         new ChatMessageCustomCodec().encode(null,loginRequestMessage,sendByteBuf);
 
-        //todo 模拟半包
-        embeddedChannel.writeInbound(sendByteBuf);
+        /** 模拟半包 */
+        int firstIndex = 6;
+        ByteBuf byteBuf1 = sendByteBuf.readSlice(firstIndex);
+        //因为分成了两个包并发送两次 每次发送都会执行release 所以这里retain一次
+        sendByteBuf.retain();
+        embeddedChannel.writeInbound(byteBuf1);
+
+        ByteBuf byteBuf2 = sendByteBuf.readSlice(sendByteBuf.writerIndex() - firstIndex);
+        embeddedChannel.writeInbound(byteBuf2);
 
     }
 
