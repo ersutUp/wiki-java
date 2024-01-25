@@ -1,4 +1,4 @@
-package top.ersut.protocol.chat;
+package top.ersut.protocol.chat.message;
 
 import lombok.Data;
 
@@ -15,21 +15,16 @@ public class LoginRequestMessage extends Message {
      */
     private String password;
 
-    /**
-     * 姓名
-     */
-    private String name;
 
-    public LoginRequestMessage(String account,String password,String name){
+    public LoginRequestMessage(String account,String password){
         this.account = account;
         this.password = password;
-        this.name = name;
     }
 
 
     @Override
     public MessageTypeEnum getMessageType() {
-        return MessageTypeEnum.Login;
+        return MessageTypeEnum.LoginRequestMessage;
     }
 
 

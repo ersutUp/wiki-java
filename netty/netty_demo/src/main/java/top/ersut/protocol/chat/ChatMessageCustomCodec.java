@@ -6,6 +6,9 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageCodec;
 import lombok.extern.slf4j.Slf4j;
+import top.ersut.protocol.chat.message.Message;
+import top.ersut.protocol.chat.message.MessageTypeEnum;
+import top.ersut.protocol.chat.message.SerializationTypeEnum;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -22,9 +25,9 @@ public class ChatMessageCustomCodec extends ByteToMessageCodec<Message> {
         //版本号
         out.writeByte(msg.getVersion());
         //序列化方式
-        out.writeByte(msg.getSerialization().val);
+        out.writeByte(msg.getSerialization().getVal());
         //消息类型
-        out.writeByte(msg.getMessageType().val);
+        out.writeByte(msg.getMessageType().getType());
         //序号
         out.writeInt(msg.getSequenceId());
 
@@ -68,15 +71,20 @@ public class ChatMessageCustomCodec extends ByteToMessageCodec<Message> {
             in.readBytes(content);
 
             //根据序列化方式 处理消息内容
-            if(SerializationTypeEnum.JSON.val == serialization){
-                String s = new String(content, StandardCharsets.UTF_8);
-                JsonElement jsonTree = new Gson().toJsonTree(s);
-                log.info("收到数据:[{}]",jsonTree);
+            if(SerializationTypeEnum.JSON.getVal() == serialization){
+                Class<Message> classByType = MessageTypeEnum.getClassByType(msgType);
+                Message message = deserializer(classByType, content);
+                log.info("收到数据:[{}]",message);
                 //将读取的内容传给下一个处理器
-                out.add(jsonTree);
+                out.add(message);
             }
         } else {
             log.info("长度值与数据不匹配");
         }
+    }
+    private <T extends Message> T deserializer(Class<T> clazz,byte[] content){
+        String s = new String(content, StandardCharsets.UTF_8);
+        Message message = new Gson().fromJson(s, clazz);
+        return (T)message;
     }
 }

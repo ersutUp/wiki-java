@@ -1,8 +1,7 @@
-package top.ersut.protocol.chat;
+package top.ersut.protocol.chat.message;
 
 import lombok.Data;
 
-import javax.xml.ws.handler.MessageContext;
 import java.util.Random;
 
 @Data

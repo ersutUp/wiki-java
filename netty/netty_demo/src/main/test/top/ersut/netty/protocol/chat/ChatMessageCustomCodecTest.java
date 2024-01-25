@@ -3,12 +3,11 @@ package top.ersut.netty.protocol.chat;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.handler.codec.FixedLengthFrameDecoder;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.logging.LoggingHandler;
 import org.junit.Test;
 import top.ersut.protocol.chat.ChatMessageCustomCodec;
-import top.ersut.protocol.chat.LoginRequestMessage;
+import top.ersut.protocol.chat.message.LoginRequestMessage;
 
 public class ChatMessageCustomCodecTest {
 
@@ -21,7 +20,7 @@ public class ChatMessageCustomCodecTest {
         );
 
         //encode
-        LoginRequestMessage loginRequestMessage = new LoginRequestMessage("ersut", "123", "王");
+        LoginRequestMessage loginRequestMessage = new LoginRequestMessage("ersut", "123");
         embeddedChannel.writeOutbound(loginRequestMessage);
     }
 
@@ -34,7 +33,7 @@ public class ChatMessageCustomCodecTest {
 
         //要发送的消息
         ByteBuf sendByteBuf = ByteBufAllocator.DEFAULT.buffer();
-        LoginRequestMessage loginRequestMessage = new LoginRequestMessage("ersut", "123", "王");
+        LoginRequestMessage loginRequestMessage = new LoginRequestMessage("ersut", "123");
         //将 loginRequestMessage 通过 encode 方法写到 sendByteBuf
         new ChatMessageCustomCodec().encode(null,loginRequestMessage,sendByteBuf);
 
@@ -54,7 +53,7 @@ public class ChatMessageCustomCodecTest {
 
         //要发送的消息
         ByteBuf sendByteBuf = ByteBufAllocator.DEFAULT.buffer();
-        LoginRequestMessage loginRequestMessage = new LoginRequestMessage("ersut", "123", "王");
+        LoginRequestMessage loginRequestMessage = new LoginRequestMessage("ersut", "123");
         //将 loginRequestMessage 通过 encode 方法写到 sendByteBuf
         new ChatMessageCustomCodec().encode(null,loginRequestMessage,sendByteBuf);
 
