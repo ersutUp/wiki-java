@@ -496,6 +496,21 @@ serverBootstrap.childHandler(new ChannelInitializer<NioSocketChannel>() {
 > 摘抄自：黑马程序员Netty全套教程（BV1py4y1E7oA）
 
 * **魔数**，用来在第一时间判定是否是无效数据包
+
+  > **一个固定值，表示协议的类型或者版本等**
+  >
+  > 例如：
+  >
+  > - **HTTP 协议：**`48 54 54 50 2F 31 2E 31`
+  >   - 这是 "HTTP/1.1" 协议的魔数。
+  > - **WebSocket 协议：**`47 45 54 20`
+  >   - WebSocket 握手请求的魔数，表示 "GET "。
+  > - **FTP 协议：**`32 32 30 20`
+  >   - FTP 协议的魔数，表示 "220 "，常用于服务器的欢迎消息。
+  > - **PNG 图片文件：**`89 50 4E 47 0D 0A 1A 0A`
+  >   - 这是 PNG 图片文件的魔数，它的前八个字节表示文件的特定标识。
+  > - **JPEG 图片文件：**`FF D8 FF E0`
+  >   - JPEG 图片文件的魔数通常以 `FF D8` 开头。
 * **版本号**，可以支持协议的升级
 * **序列化算法**，消息正文到底采用哪种序列化反序列化方式，可以由此扩展，例如：json、xml
 * **指令（消息）类型**，是登录、注册、单聊、群聊... 跟业务相关
@@ -650,7 +665,3 @@ public void decodeHalfPackTest(){
 ```
 
 **通过2处的 `LengthFieldBasedFrameDecoder` 处理器解决了半包的问题。**
-
-
-
-魔数 是什么？？？
