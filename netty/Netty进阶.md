@@ -518,7 +518,7 @@ serverBootstrap.childHandler(new ChannelInitializer<NioSocketChannel>() {
 * 正文长度
 * 消息正文
 
-
+#### 2.2.2 编解码器
 
 `ByteToMessageCodec<T>`抽象类：**将ByteBuf转换为对应的泛型。**
 
@@ -665,3 +665,75 @@ public void decodeHalfPackTest(){
 ```
 
 **通过2处的 `LengthFieldBasedFrameDecoder` 处理器解决了半包的问题。**
+
+#### 2.2.3 标识可共享的处理器
+
+通过`@ChannelHandler.Sharable`可标识一个处理器是可共享的，并且这个处理器只可以创建一次（即单例模式）。
+
+- 处理器**无状态**的则**可共享**
+  - 例如：[ChatMessageCustomCodec类](netty_demo/src/main/java/top/ersut/protocol/chat/ChatMessageCustomCodec.java)，他的编解码只使用方法内的数据，**编解码完成就发送给下一个处理器**
+
+- 处理器**有状态**的则**可不共享**
+  - 例如：`LengthFieldBasedFrameDecoder`类（LTC解码器），当他接收到的数据**不满足其长度时，会暂时存储起来**，直到接收其他数据**满足了其长度，才会发送给下一个处理器**。
+
+<p style="color:red">可共享处理器中要注意线程安全问题</p>
+
+[ChatMessageCustomCodec类](netty_demo/src/main/java/top/ersut/protocol/chat/ChatMessageCustomCodec.java)标识为可共享的会报错，因为他的父类（`ByteToMessageCodec`）不支持，可以使用`MessageToMessageCodec`作为父类。
+
+示例 [ChatMessageCustomCodecSharable](netty_demo/src/main/java/top/ersut/protocol/chat/ChatMessageCustomCodecSharable.java)：
+
+```java
+@ChannelHandler.Sharable
+public class ChatMessageCustomCodecSharable extends MessageToMessageCodec<ByteBuf, Message> {
+    @Override
+    protected void encode(ChannelHandlerContext ctx, Message msg, List<Object> out) throws Exception {
+        ...
+    }
+
+    @Override
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+        ...
+    }
+}
+```
+
+其中的编解码代码与[ChatMessageCustomCodec类](netty_demo/src/main/java/top/ersut/protocol/chat/ChatMessageCustomCodec.java)相同。
+
+##### 可共享处理器的使用
+
+可以将其定义在公共常量或者遍历中，给不同的ChannelPipelines使用，如下：
+
+```java
+
+final ChatMessageCustomCodecSharable CHAT_MESSAGE_CUSTOM_CODEC_SHARABLE_HANDLER = new ChatMessageCustomCodecSharable();
+
+@Test
+public void testEncode() {
+    EmbeddedChannel embeddedChannel = new EmbeddedChannel();
+    embeddedChannel.pipeline().addLast(new LoggingHandler(), CHAT_MESSAGE_CUSTOM_CODEC_SHARABLE_HANDLER);//1处
+
+    //encode
+    LoginRequestMessage loginRequestMessage = new LoginRequestMessage("ersut", "123");
+    embeddedChannel.writeOutbound(loginRequestMessage);
+}
+
+@Test
+public void decodeTest() {
+    EmbeddedChannel embeddedChannel = new EmbeddedChannel();
+    embeddedChannel.pipeline().addLast(CHAT_MESSAGE_CUSTOM_CODEC_SHARABLE_HANDLER);//2处
+
+    //要发送的消息
+    ByteBuf sendByteBuf = ByteBufAllocator.DEFAULT.buffer();
+    LoginRequestMessage loginRequestMessage = new LoginRequestMessage("ersut", "123");
+    //将 loginRequestMessage 通过 encode 方法写到 sendByteBuf
+    new ChatMessageCustomCodec().encode(null, loginRequestMessage, sendByteBuf);
+
+    //decode
+    embeddedChannel.writeInbound(sendByteBuf);
+}
+```
+
+1处和2处都使用了ChatMessageCustomCodecSharable处理器
+
+<p style="color:red">可共享处理器中要注意线程安全问题</p>
+
