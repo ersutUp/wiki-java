@@ -10,7 +10,13 @@ import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.logging.LoggingHandler;
 import lombok.extern.slf4j.Slf4j;
 import top.ersut.protocol.chat.ChatMessageCustomCodecSharable;
+import top.ersut.protocol.chat.message.LoginRequestMessage;
+import top.ersut.protocol.chat.message.LoginResponseMessage;
+import top.ersut.protocol.chat.server.service.UserService;
+import top.ersut.protocol.chat.server.service.UserServiceFactory;
 import top.ersut.protocol.chat.server.session.Group;
+
+import java.util.Scanner;
 
 
 @Slf4j
@@ -36,8 +42,27 @@ public class ChatServer {
                         ch.pipeline().addLast(
                                 //LTC解码器，解决半包粘包的问题
                                 new LengthFieldBasedFrameDecoder(1024, 12, 4, 0, 0),
-                                CHAT_MESSAGE_CUSTOM_CODEC_SHARABLE_HANDLER,
-                                LOGGING_HANDLER
+                                LOGGING_HANDLER,
+                                CHAT_MESSAGE_CUSTOM_CODEC_SHARABLE_HANDLER
+
+                        );
+                        ch.pipeline().addLast(
+                                new SimpleChannelInboundHandler<LoginRequestMessage>() {
+
+                                    @Override
+                                    protected void channelRead0(ChannelHandlerContext ctx, LoginRequestMessage msg) throws Exception {
+                                        LoginResponseMessage loginResponseMessage;
+
+                                        UserService userService = UserServiceFactory.getUserService();
+                                        if (userService.login(msg.getAccount(), msg.getPassword())) {
+                                            loginResponseMessage = new LoginResponseMessage(true,"登录成功");
+                                        } else {
+                                            loginResponseMessage = new LoginResponseMessage(false,"登录成功");
+                                        }
+
+                                        ctx.writeAndFlush(loginResponseMessage);
+                                    }
+                                }
                         );
                     }
                 }).bind(18808);

@@ -9,8 +9,12 @@ import io.netty.handler.logging.LoggingHandler;
 import lombok.extern.slf4j.Slf4j;
 import top.ersut.protocol.chat.ChatMessageCustomCodecSharable;
 import top.ersut.protocol.chat.message.LoginRequestMessage;
+import top.ersut.protocol.chat.message.LoginResponseMessage;
+import top.ersut.protocol.chat.server.service.UserService;
+import top.ersut.protocol.chat.server.service.UserServiceFactory;
 
 import java.net.InetSocketAddress;
+import java.util.Scanner;
 
 @Slf4j
 public class ChatClient {
@@ -31,9 +35,40 @@ public class ChatClient {
                         ch.pipeline().addLast(
                                 //LTC解码器，解决半包粘包的问题
                                 new LengthFieldBasedFrameDecoder(1024, 12, 4, 0, 0),
-                                CHAT_MESSAGE_CUSTOM_CODEC_SHARABLE_HANDLER,
-                                LOGGING_HANDLER
+                                LOGGING_HANDLER,
+                                CHAT_MESSAGE_CUSTOM_CODEC_SHARABLE_HANDLER
                         );
+                        ch.pipeline().addLast(new ChannelInboundHandlerAdapter(){
+                            @Override
+                            public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                                log.info("msg:{}",msg);
+                                if(msg instanceof LoginResponseMessage){
+                                    LoginResponseMessage loginResponseMessage = (LoginResponseMessage) msg;
+                                    log.info(loginResponseMessage.getReason());
+                                    ctx.channel().close();
+                                }
+                                super.channelRead(ctx, msg);
+                            }
+
+                            @Override
+                            public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                                super.channelActive(ctx);
+
+                                new Thread(()->{
+                                    Scanner scanner = new Scanner(System.in);
+                                    System.out.print("请输入用户名：");
+                                    String username = scanner.nextLine();
+                                    System.out.print("请输入密码：");
+                                    String password = scanner.nextLine();
+
+                                    LoginRequestMessage loginRequestMessage = new LoginRequestMessage(username,password);
+
+                                    ctx.writeAndFlush(loginRequestMessage);
+
+                                },"system in").start();
+                            }
+                        });
+
                     }
 
                 })
@@ -44,6 +79,7 @@ public class ChatClient {
                 log.info("连接服务端成功");
             } else {
                 log.error("连接服务端失败");
+                channel.close();
             }
         });
 
