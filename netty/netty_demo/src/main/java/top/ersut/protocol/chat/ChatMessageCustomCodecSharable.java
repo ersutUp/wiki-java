@@ -38,7 +38,8 @@ public class ChatMessageCustomCodecSharable extends MessageToMessageCodec<ByteBu
         //补充字节，消息头部凑齐16字节
         bufferOut.writeByte(0);
 
-        byte msgByte[] = new Gson().toJson(msg).getBytes(StandardCharsets.UTF_8);
+        //序列化
+        byte[] msgByte = msg.getSerialization().serializer(msg);
 
         //数据长度
         int length = msgByte.length;
@@ -75,22 +76,16 @@ public class ChatMessageCustomCodecSharable extends MessageToMessageCodec<ByteBu
             byte[] content = new byte[length];
             in.readBytes(content);
 
-            //根据序列化方式 处理消息内容
-            if(SerializationTypeEnum.JSON.getVal() == serialization){
-                Class<Message> classByType = MessageTypeEnum.getClassByType(msgType);
-                Message message = deserializer(classByType, content);
-                log.info("收到数据:[{}]",message);
-                //将读取的内容传给下一个处理器
-                out.add(message);
-            }
+            //消息类型对象
+            Class<Message> classByType = MessageTypeEnum.getClassByType(msgType);
+            //反序列化消息
+            Message message = SerializationTypeEnum.getEnumByVal(serialization).deserializer(classByType,content);
+
+            log.info("收到数据:[{}]",message);
+            //将读取的内容传给下一个处理器
+            out.add(message);
         } else {
             log.info("长度值与数据不匹配");
         }
-    }
-
-    private <T extends Message> T deserializer(Class<T> clazz,byte[] content){
-        String s = new String(content, StandardCharsets.UTF_8);
-        Message message = new Gson().fromJson(s, clazz);
-        return (T)message;
     }
 }

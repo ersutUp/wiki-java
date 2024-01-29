@@ -2,10 +2,11 @@ package top.ersut.protocol.chat.message;
 
 import lombok.Data;
 
+import java.io.Serializable;
 import java.util.Random;
 
 @Data
-public abstract class Message {
+public abstract class Message  implements Serializable {
 
     //版本号
     private byte version = 0x01;
@@ -18,7 +19,7 @@ public abstract class Message {
 
     public Message(){
         this.sequenceId = new Random().nextInt();
-        this.serialization = SerializationTypeEnum.JSON;
+        this.serialization = SerializationTypeEnum.Json;
     }
 
     //获取消息类型的抽象方法
