@@ -2,6 +2,7 @@ package top.ersut.protocol.chat.server.session;
 
 
 import io.netty.channel.Channel;
+import top.ersut.protocol.chat.server.entity.User;
 
 /**
  * 会话管理接口
@@ -11,9 +12,9 @@ public interface Session {
     /**
      * 绑定会话
      * @param channel 哪个 channel 要绑定会话
-     * @param username 会话绑定用户
+     * @param user 用户
      */
-    void bind(Channel channel, String username);
+    void bind(Channel channel, User user);
 
     /**
      * 解绑会话
@@ -43,4 +44,11 @@ public interface Session {
      * @return channel
      */
     Channel getChannel(String username);
+
+    /**
+     * 根据 channel 查找用户名
+     * @param channel
+     * @return 用户名
+     */
+    User getUser(Channel channel);
 }

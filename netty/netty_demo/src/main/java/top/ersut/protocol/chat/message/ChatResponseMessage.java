@@ -23,12 +23,4 @@ public class ChatResponseMessage extends AbstractResponseMessage {
     public MessageTypeEnum getMessageType() {
         return MessageTypeEnum.ChatResponseMessage;
     }
-
-    @Override
-    public String toString() {
-        return "ChatResponseMessage{" +
-                "from='" + from + '\'' +
-                ", content='" + content + '\'' +
-                '}';
-    }
 }

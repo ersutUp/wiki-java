@@ -1,6 +1,7 @@
 package top.ersut.protocol.chat.server.session;
 
 import io.netty.channel.Channel;
+import top.ersut.protocol.chat.server.entity.User;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -8,20 +9,20 @@ import java.util.concurrent.ConcurrentHashMap;
 public class SessionMemoryImpl implements Session {
 
     private final Map<String, Channel> usernameChannelMap = new ConcurrentHashMap<>();
-    private final Map<Channel, String> channelUsernameMap = new ConcurrentHashMap<>();
+    private final Map<Channel, User> channelUserMap = new ConcurrentHashMap<>();
     private final Map<Channel,Map<String,Object>> channelAttributesMap = new ConcurrentHashMap<>();// 每个 channel 包含的属性
 
     @Override
-    public void bind(Channel channel, String username) {
-        usernameChannelMap.put(username, channel);
-        channelUsernameMap.put(channel, username);
+    public void bind(Channel channel, User user) {
+        usernameChannelMap.put(user.getUserName(), channel);
+        channelUserMap.put(channel, user);
         channelAttributesMap.put(channel, new ConcurrentHashMap<>());
     }
 
     @Override
     public void unbind(Channel channel) {
-        String username = channelUsernameMap.remove(channel);
-        usernameChannelMap.remove(username);
+        User user = channelUserMap.remove(channel);
+        usernameChannelMap.remove(user.getUserName());
         channelAttributesMap.remove(channel);
     }
 
@@ -38,6 +39,11 @@ public class SessionMemoryImpl implements Session {
     @Override
     public Channel getChannel(String username) {
         return usernameChannelMap.get(username);
+    }
+
+    @Override
+    public User getUser(Channel channel) {
+        return channelUserMap.get(channel);
     }
 
     @Override

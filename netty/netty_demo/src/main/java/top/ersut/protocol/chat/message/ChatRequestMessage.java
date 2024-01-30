@@ -8,13 +8,11 @@ import lombok.ToString;
 public class ChatRequestMessage extends Message {
     private String content;
     private String to;
-    private String from;
 
     public ChatRequestMessage() {
     }
 
-    public ChatRequestMessage(String from, String to, String content) {
-        this.from = from;
+    public ChatRequestMessage(String to, String content) {
         this.to = to;
         this.content = content;
     }
@@ -29,7 +27,6 @@ public class ChatRequestMessage extends Message {
         return "ChatRequestMessage{" +
                 "content='" + content + '\'' +
                 ", to='" + to + '\'' +
-                ", from='" + from + '\'' +
                 '}';
     }
 }

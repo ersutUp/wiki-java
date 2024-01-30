@@ -10,13 +10,8 @@ import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.logging.LoggingHandler;
 import lombok.extern.slf4j.Slf4j;
 import top.ersut.protocol.chat.ChatMessageCustomCodecSharable;
-import top.ersut.protocol.chat.message.LoginRequestMessage;
-import top.ersut.protocol.chat.message.LoginResponseMessage;
-import top.ersut.protocol.chat.server.service.UserService;
-import top.ersut.protocol.chat.server.service.UserServiceFactory;
-import top.ersut.protocol.chat.server.session.Group;
-
-import java.util.Scanner;
+import top.ersut.protocol.chat.server.handler.ChatRequestMessageHandler;
+import top.ersut.protocol.chat.server.handler.LoginRequestMessageHandler;
 
 
 @Slf4j
@@ -26,18 +21,20 @@ public class ChatServer {
 
     //日志处理器
     static final LoggingHandler LOGGING_HANDLER = new LoggingHandler();
+    static final LoginRequestMessageHandler LOGIN_REQUEST_MESSAGE_HANDLER = new LoginRequestMessageHandler();
+    static final ChatRequestMessageHandler CHAT_REQUEST_MESSAGE_HANDLER = new ChatRequestMessageHandler();
 
     public static void main(String[] args) {
 
-        EventLoopGroup boss = new NioEventLoopGroup();
-        EventLoopGroup works = new NioEventLoopGroup();
+                            EventLoopGroup boss = new NioEventLoopGroup();
+            EventLoopGroup works = new NioEventLoopGroup();
 
-        ServerBootstrap serverBootstrap = new ServerBootstrap();
-        try {
-            ChannelFuture bindFuture = serverBootstrap
-                    .group(boss, works)
-                    .channel(NioServerSocketChannel.class)
-                    .childHandler(new ChannelInitializer<NioSocketChannel>() {
+            ServerBootstrap serverBootstrap = new ServerBootstrap();
+            try {
+                ChannelFuture bindFuture = serverBootstrap
+                        .group(boss, works)
+                        .channel(NioServerSocketChannel.class)
+                        .childHandler(new ChannelInitializer<NioSocketChannel>() {
                         @Override
                         protected void initChannel(NioSocketChannel ch) throws Exception {
                             ch.pipeline().addLast(
@@ -47,24 +44,8 @@ public class ChatServer {
                                     CHAT_MESSAGE_CUSTOM_CODEC_SHARABLE_HANDLER
 
                             );
-                            ch.pipeline().addLast(
-                                    new SimpleChannelInboundHandler<LoginRequestMessage>() {
-
-                                        @Override
-                                        protected void channelRead0(ChannelHandlerContext ctx, LoginRequestMessage msg) throws Exception {
-                                            LoginResponseMessage loginResponseMessage;
-
-                                            UserService userService = UserServiceFactory.getUserService();
-                                            if (userService.login(msg.getAccount(), msg.getPassword())) {
-                                                loginResponseMessage = new LoginResponseMessage(true, "登录成功");
-                                            } else {
-                                                loginResponseMessage = new LoginResponseMessage(false, "登录成功");
-                                            }
-
-                                            ctx.writeAndFlush(loginResponseMessage);
-                                        }
-                                    }
-                            );
+                            ch.pipeline().addLast(LOGIN_REQUEST_MESSAGE_HANDLER);
+                            ch.pipeline().addLast(CHAT_REQUEST_MESSAGE_HANDLER);
                         }
                     }).bind(18808);
 
@@ -73,7 +54,7 @@ public class ChatServer {
                 if (future.isSuccess()) {
                     log.info("服务端启动成功");
                 } else {
-                    log.error("服务端启动失败");
+                    log.error("服务端启动失败",future.cause());
                 }
             });
 
