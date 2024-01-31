@@ -53,7 +53,7 @@ public class ChatClient {
                             ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
                                 @Override
                                 public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-                                    log.info("msg:{}", msg);
+//                                    log.info("msg:{}", msg);
                                     super.channelRead(ctx, msg);
                                 }
 
