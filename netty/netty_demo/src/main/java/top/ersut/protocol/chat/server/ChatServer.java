@@ -28,6 +28,7 @@ public class ChatServer {
     static final GroupJoinRequestMessageHandler GROUP_JOIN_REQUEST_MESSAGE_HANDLER = new GroupJoinRequestMessageHandler();
     static final GroupQuitRequestMessageHandler GROUP_QUIT_REQUEST_MESSAGE_HANDLER = new GroupQuitRequestMessageHandler();
     static final GroupMembersRequestMessageHandler GROUP_MEMBERS_REQUEST_MESSAGE_HANDLER = new GroupMembersRequestMessageHandler();
+    static final QuitHandler QUIT_HANDLER = new QuitHandler();
 
 
     public static void main(String[] args) {
@@ -51,13 +52,14 @@ public class ChatServer {
 
                             );
                             ch.pipeline().addLast(
-                                    LOGIN_REQUEST_MESSAGE_HANDLER,
-                                    CHAT_REQUEST_MESSAGE_HANDLER,
-                                    GROUP_CHAT_REQUEST_MESSAGE_HANDLER,
-                                    GROUP_CREATE_REQUEST_MESSAGE_HANDLER,
-                                    GROUP_JOIN_REQUEST_MESSAGE_HANDLER,
-                                    GROUP_QUIT_REQUEST_MESSAGE_HANDLER,
-                                    GROUP_MEMBERS_REQUEST_MESSAGE_HANDLER
+                                    LOGIN_REQUEST_MESSAGE_HANDLER
+                                    ,CHAT_REQUEST_MESSAGE_HANDLER
+                                    ,GROUP_CHAT_REQUEST_MESSAGE_HANDLER
+                                    ,GROUP_CREATE_REQUEST_MESSAGE_HANDLER
+                                    ,GROUP_JOIN_REQUEST_MESSAGE_HANDLER
+                                    ,GROUP_QUIT_REQUEST_MESSAGE_HANDLER
+                                    ,GROUP_MEMBERS_REQUEST_MESSAGE_HANDLER
+                                    ,QUIT_HANDLER
                             );
                         }
                     }).bind(18808);
