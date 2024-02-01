@@ -18,13 +18,14 @@ public class LoginRequestMessageHandler extends SimpleChannelInboundHandler<Logi
         LoginResponseMessage loginResponseMessage;
 
         UserService userService = UserServiceFactory.getUserService();
+        //验证账号密码
         User user = userService.login(msg.getAccount(), msg.getPassword());
         if (user != null) {
             //放入session
             SessionFactory.getSession().bind(ctx.channel(),user);
             loginResponseMessage = new LoginResponseMessage(true, "登录成功");
         } else {
-            loginResponseMessage = new LoginResponseMessage(false, "登录成功");
+            loginResponseMessage = new LoginResponseMessage(false, "登录失败");
         }
 
         ctx.writeAndFlush(loginResponseMessage);

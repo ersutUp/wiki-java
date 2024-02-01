@@ -8,6 +8,9 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.logging.LoggingHandler;
+import io.netty.handler.timeout.IdleState;
+import io.netty.handler.timeout.IdleStateEvent;
+import io.netty.handler.timeout.IdleStateHandler;
 import lombok.extern.slf4j.Slf4j;
 import top.ersut.protocol.chat.ChatMessageCustomCodecSharable;
 import top.ersut.protocol.chat.server.handler.*;
@@ -51,6 +54,24 @@ public class ChatServer {
                                     CHAT_MESSAGE_CUSTOM_CODEC_SHARABLE_HANDLER
 
                             );
+                            //IdleStateHandler：检测固定时间内是否有数据
+                            //10秒内没有读取到数据，会触发 IdleState.READER_IDLE 事件，通过
+                            ch.pipeline().addLast(new IdleStateHandler(10,0,0));
+                            ch.pipeline().addLast(new ChannelDuplexHandler(){
+                                //处理用户事件，例如 IdleState.READER_IDLE 事件
+                                @Override
+                                public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                                    super.userEventTriggered(ctx, evt);
+                                    if (evt instanceof IdleStateEvent) {
+                                        IdleStateEvent idleStateEvent = ((IdleStateEvent) evt);
+                                        //IdleStateHandler的读事件
+                                        if (idleStateEvent.state() == IdleState.READER_IDLE) {
+                                            log.info("已经10秒没有读数据了");
+                                            ctx.channel().close();
+                                        }
+                                    }
+                                }
+                            });
                             ch.pipeline().addLast(
                                     LOGIN_REQUEST_MESSAGE_HANDLER
                                     ,CHAT_REQUEST_MESSAGE_HANDLER

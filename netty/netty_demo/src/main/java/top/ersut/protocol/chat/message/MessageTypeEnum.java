@@ -10,6 +10,7 @@ public enum MessageTypeEnum {
     GroupJoinRequestMessage((byte) 0x04,GroupJoinRequestMessage.class),
     GroupMembersRequestMessage((byte) 0x05,GroupMembersRequestMessage.class),
     GroupQuitRequestMessage((byte) 0x06,GroupQuitRequestMessage.class),
+    PingMessage((byte) 0x0E,PingMessage.class),
 
 
     LoginResponseMessage((byte) 0x07,LoginResponseMessage.class),

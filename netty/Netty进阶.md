@@ -735,5 +735,302 @@ public void decodeTest() {
 
 1处和2处都使用了ChatMessageCustomCodecSharable处理器
 
-<p style="color:red">可共享处理器中要注意线程安全问题</p>
+## 三、聊天室案例
 
+[代码](./netty_demo/src/main/java/top/ersut/protocol/chat)
+
+包结构
+
+```txt
+|-- chat
+    |-- ChatMessageCustomCodecSharable.java  //消息编解码器
+    |-- client
+    |   |-- ChatClient.java //客户端
+    |   |-- handler         //客户端处理器
+    |       |-- ChatHandler.java                  //命令行聊天处理器
+    |       |-- HeartbeatHandlerFactory.java      //心跳处理器
+    |       |-- LoginResponseMessageHandler.java  //登录响应处理器
+    |-- message               //每种消息的类
+    |-- server
+        |-- ChatServer.java   //服务端
+        |-- handler           //服务端处理器
+        |   |-- ChatRequestMessageHandler.java          //单聊处理器
+        |   |-- GroupChatRequestMessageHandler.java     //群聊处理器
+        |   |-- GroupCreateRequestMessageHandler.java   //创建群处理器
+        |   |-- GroupJoinRequestMessageHandler.java     //加入群处理器
+        |   |-- GroupMembersRequestMessageHandler.java  //获取群成员处理器
+        |   |-- GroupQuitRequestMessageHandler.java     //退群处理器
+        |   |-- LoginRequestMessageHandler.java         //登录处理器
+        |   |-- QuitHandler.java                        //客户端退出处理器
+        |-- service
+        |   |-- UserService.java						//用户service，主要处理用户登录
+        |-- session
+            |-- GroupSession.java                       //群组会话
+            |-- Session.java                            //客户端会话，存储用户与channel的关联
+```
+
+### 3.1 登录部分
+
+#### 客户端：
+
+##### `ChatClient`类
+
+```java
+
+public static void main(String[] args) {
+    EventLoopGroup eventLoopGroup = new NioEventLoopGroup();
+
+    //用户在控制台输入等待
+    CountDownLatch CONSOLE_IN_WAIT = new CountDownLatch(1);
+    //是否登录
+    AtomicBoolean IS_LOGIN = new AtomicBoolean(false);
+
+    ...
+    
+    Bootstrap bootstrap = new Bootstrap();
+    ChannelFuture channelFuture = bootstrap
+
+        ...
+
+            .handler(new ChannelInitializer<NioSocketChannel>() {
+                @Override
+                protected void initChannel(NioSocketChannel ch) throws Exception {
+
+                    ...
+
+                    //客户端的消息处理器
+                    ch.pipeline().addLast(
+                        new ChatHandler(CONSOLE_IN_WAIT,IS_LOGIN)
+                    );
+                    //客户端登录响应处理器
+                    ch.pipeline().addLast(
+                        new LoginResponseMessageHandler(IS_LOGIN,CONSOLE_IN_WAIT)
+                    );
+                }
+
+            })
+            .connect(new InetSocketAddress("127.0.0.1", 18808));
+
+        ...
+
+
+}
+
+```
+
+**`ChatHandler`处理器发送登录请求**
+
+**`LoginResponseMessageHandler`处理器接收登录请求**
+
+通过 `CONSOLE_IN_WAIT`和`IS_LOGIN`处理了线程之间的通讯
+
+
+
+##### `ChatHandler`聊天消息处理器
+
+```java
+public class ChatHandler extends ChannelInboundHandlerAdapter {
+
+    //用户在控制台输入等待
+    private final CountDownLatch CONSOLE_IN_WAIT;
+    //是否登录
+    private AtomicBoolean IS_LOGIN;
+    
+    public ChatHandler(CountDownLatch CONSOLE_IN_WAIT,AtomicBoolean IS_LOGIN){
+        this.CONSOLE_IN_WAIT = CONSOLE_IN_WAIT;
+        this.IS_LOGIN = IS_LOGIN;
+    }
+
+    @Override
+    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        super.channelActive(ctx);
+
+        new Thread(() -> {
+            Scanner scanner = new Scanner(System.in);
+            System.out.print("请输入用户名：");
+            String username = scanner.nextLine();
+            System.out.print("请输入密码：");
+            String password = scanner.nextLine();
+
+            LoginRequestMessage loginRequestMessage = new LoginRequestMessage(username, password);
+            ctx.writeAndFlush(loginRequestMessage);
+
+            System.out.println("等待响应......");
+            try {
+                CONSOLE_IN_WAIT.await();
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+
+            if (IS_LOGIN.get()) {
+                System.out.println("登录成功");
+            } else {
+                System.out.println("登录失败");
+                ctx.channel().close();
+                return;
+            }
+
+        }, "system in").start();
+    }
+}
+```
+
+**channel连接成功（`channelActive()`）后**，新建 'system in' 线程（避免阻塞netty的线程）接收用户的输入（scanner.nextLine()）以及发送消息，**对账号密码封装到登录请求消息类（LoginRequestMessage），发送给服务端**;
+
+**通过`CONSOLE_IN_WAIT.await();`阻塞线程等待服务端的响应**
+
+
+
+##### `LoginResponseMessageHandler`登录响应消息处理器
+
+```java
+@Slf4j
+public class LoginResponseMessageHandler extends SimpleChannelInboundHandler<LoginResponseMessage> {
+
+    private final AtomicBoolean IS_LOGIN;
+    private final CountDownLatch CONSOLE_IN_WAIT;
+
+    public LoginResponseMessageHandler(final AtomicBoolean IS_LOGIN,final CountDownLatch CONSOLE_IN_WAIT){
+        this.IS_LOGIN = IS_LOGIN;
+        this.CONSOLE_IN_WAIT = CONSOLE_IN_WAIT;
+    }
+    @Override
+    protected void channelRead0(ChannelHandlerContext ctx, LoginResponseMessage loginResponseMessage) throws Exception {
+        log.info(loginResponseMessage.getReason());
+        if (loginResponseMessage.isSuccess()) {
+            IS_LOGIN.set(true);
+        }
+        CONSOLE_IN_WAIT.countDown();
+    }
+}
+```
+
+通过`loginResponseMessage.isSuccess()`判断是否登陆成功，如果**登录成功给`IS_LOGIN`设置为`true`;**
+
+**最后执行`CONSOLE_IN_WAIT.countDown();`解除'system in'线程的阻塞；**
+
+#### 服务端
+
+`LoginRequestMessageHandler`登录请求处理器
+
+```java
+@Override
+protected void channelRead0(ChannelHandlerContext ctx, LoginRequestMessage msg) throws Exception {
+    LoginResponseMessage loginResponseMessage;
+    
+    ...
+    
+    User user = userService.login(msg.getAccount(), msg.getPassword());
+    if (user != null) {
+        
+        ...
+            
+        loginResponseMessage = new LoginResponseMessage(true, "登录成功");
+    } else {
+        loginResponseMessage = new LoginResponseMessage(false, "登录失败");
+    }
+
+    ctx.writeAndFlush(loginResponseMessage);
+}
+```
+
+通过`userService.login(msg.getAccount(), msg.getPassword());`验证账号密码，最后**封装到`LoginResponseMessage`类并发送给客户端供`LoginResponseMessageHandler`处理**
+
+
+
+### 3.2 心跳部分
+
+#### 3.2.1 💡为什么需要心跳？
+
+- TCP连接出现故障，如网卡出现故障、网络出现故障、等
+- 客户端卡死
+- 客户端丢包严重，客户端与服务端会连接正常，造成双方的资源浪费
+
+
+
+#### 3.2.2解决方案：
+
+**服务端检测很久没有收到数据，则断开连接。**
+
+**客户端定时发送数据（心跳）检测是否正常连接**
+
+
+
+##### **IdleStateHandler：检测写数据、读数据或读写数据的间隔时间，并出发对应事件**
+
+- 构造方法：public IdleStateHandler(int readerIdleTimeSeconds, int writerIdleTimeSeconds, int allIdleTimeSeconds)
+  - readerIdleTimeSeconds：多久没有入站消息，则触发 IdleState.READER_IDLE 事件
+  - writerIdleTimeSeconds：多久出站消息，则触发 IdleState.WRITER_IDLE 事件
+  - allIdleTimeSeconds：多久没有入站或出站消息，则触发 IdleState.ALL_IDLE 事件
+
+
+
+**通过`ChannelInboundHandler#userEventTriggered`可以检测上述的事件**
+
+
+
+ChannelDuplexHandler：一个融合处理器，即可以处理入站消息，也可以处理出站消息。
+
+
+
+#### **客户端发送心跳**：
+
+[代码](netty_demo/src/main/java/top/ersut/protocol/chat/client/handler/HeartbeatHandlerFactory.java)
+
+```java
+PingMessageHandler pingMessageHandler = new PingMessageHandler();
+
+public IdleStateHandler getIdleStateHandler(){
+    //8秒没有出站消息则触发IdleStateHandler的写事件
+    return new IdleStateHandler(0,8,0);
+}
+
+public PingMessageHandler getPingMessageHandler(){
+    return pingMessageHandler;
+}
+
+
+@ChannelHandler.Sharable
+class PingMessageHandler extends ChannelDuplexHandler {
+    @Override
+    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+        super.userEventTriggered(ctx, evt);
+        if (evt instanceof IdleStateEvent) {
+            IdleStateEvent idleStateEvent = ((IdleStateEvent) evt);
+            //IdleStateHandler的写事件
+            if (idleStateEvent.state() == IdleState.WRITER_IDLE) {
+                log.info("发送一个心跳");
+                //触发写事件，则发送一条出站消息
+                ctx.writeAndFlush(new PingMessage());
+            }
+        }
+    }
+}
+```
+
+#### 服务端检测心跳：
+
+[代码](netty_demo/src/main/java/top/ersut/protocol/chat/server/ChatServer.java)
+
+```java
+//IdleStateHandler：检测固定时间内是否有数据
+//10秒内没有读取到数据，会触发 IdleState.READER_IDLE 事件，通过
+ch.pipeline().addLast(new IdleStateHandler(10,0,0));
+ch.pipeline().addLast(new ChannelDuplexHandler(){
+    //处理用户事件，例如 IdleState.READER_IDLE 事件
+    @Override
+    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+        super.userEventTriggered(ctx, evt);
+        if (evt instanceof IdleStateEvent) {
+            IdleStateEvent idleStateEvent = ((IdleStateEvent) evt);
+            //IdleStateHandler的读事件
+            if (idleStateEvent.state() == IdleState.READER_IDLE) {
+                log.info("已经10秒没有读数据了");
+                ctx.channel().close();
+            }
+        }
+    }
+});
+```
+
+**注意：**客户端发送心跳的频率要高于服务端检测的频率，例如客户端发送频率为8秒一次，那服务端检测要高于8秒
