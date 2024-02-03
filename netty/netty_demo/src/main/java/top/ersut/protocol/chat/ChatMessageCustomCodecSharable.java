@@ -7,6 +7,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageCodec;
 import io.netty.handler.codec.MessageToMessageDecoder;
 import lombok.extern.slf4j.Slf4j;
+import top.ersut.protocol.chat.config.Config;
 import top.ersut.protocol.chat.message.Message;
 import top.ersut.protocol.chat.message.MessageTypeEnum;
 import top.ersut.protocol.chat.message.SerializationTypeEnum;
@@ -20,6 +21,13 @@ import java.util.List;
 @Slf4j
 @ChannelHandler.Sharable
 public class ChatMessageCustomCodecSharable extends MessageToMessageCodec<ByteBuf, Message> {
+
+    static final SerializationTypeEnum serializationTypeEnum;
+    static {
+        String serializar = Config.getSerializar();
+        serializationTypeEnum = SerializationTypeEnum.valueOf(serializar);
+    }
+
     @Override
     protected void encode(ChannelHandlerContext ctx, Message msg, List<Object> out) throws Exception {
 
@@ -29,7 +37,7 @@ public class ChatMessageCustomCodecSharable extends MessageToMessageCodec<ByteBu
         //版本号
         bufferOut.writeByte(msg.getVersion());
         //序列化方式
-        bufferOut.writeByte(msg.getSerialization().getVal());
+        bufferOut.writeByte(serializationTypeEnum.getVal());
         //消息类型
         bufferOut.writeByte(msg.getMessageType().getType());
         //序号
@@ -39,7 +47,7 @@ public class ChatMessageCustomCodecSharable extends MessageToMessageCodec<ByteBu
         bufferOut.writeByte(0);
 
         //序列化
-        byte[] msgByte = msg.getSerialization().serializer(msg);
+        byte[] msgByte = serializationTypeEnum.serializer(msg);
 
         //数据长度
         int length = msgByte.length;

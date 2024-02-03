@@ -11,6 +11,7 @@ import top.ersut.protocol.chat.ChatMessageCustomCodecSharable;
 import top.ersut.protocol.chat.client.handler.ChatHandler;
 import top.ersut.protocol.chat.client.handler.HeartbeatHandlerFactory;
 import top.ersut.protocol.chat.client.handler.LoginResponseMessageHandler;
+import top.ersut.protocol.chat.config.Config;
 import top.ersut.protocol.chat.message.*;
 import top.ersut.protocol.chat.server.service.UserService;
 import top.ersut.protocol.chat.server.service.UserServiceFactory;
@@ -71,7 +72,7 @@ public class ChatClient {
                         }
 
                     })
-                    .connect(new InetSocketAddress("127.0.0.1", 18808));
+                    .connect(new InetSocketAddress("127.0.0.1", Config.getServerPort()));
             Channel channel = channelFuture.channel();
             channelFuture.addListener(future -> {
                 if (future.isSuccess()) {

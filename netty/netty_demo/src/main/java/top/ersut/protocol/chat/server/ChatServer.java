@@ -13,6 +13,7 @@ import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.handler.timeout.IdleStateHandler;
 import lombok.extern.slf4j.Slf4j;
 import top.ersut.protocol.chat.ChatMessageCustomCodecSharable;
+import top.ersut.protocol.chat.config.Config;
 import top.ersut.protocol.chat.server.handler.*;
 import top.ersut.protocol.chat.server.session.Group;
 
@@ -83,7 +84,7 @@ public class ChatServer {
                                     ,QUIT_HANDLER
                             );
                         }
-                    }).bind(18808);
+                    }).bind(Config.getServerPort());
 
             Channel channel = bindFuture.channel();
             bindFuture.addListener(future -> {
