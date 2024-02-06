@@ -58,6 +58,9 @@ public enum SerializationTypeEnum implements MessageSerializar {
         }
     };
 
+    /**
+     * 给协议头使用的，在协议头重通过该字节标识具体序列化方式
+     */
     @Getter
     byte val;
     SerializationTypeEnum(byte val){
@@ -66,7 +69,9 @@ public enum SerializationTypeEnum implements MessageSerializar {
 
 
     static Map<Byte,SerializationTypeEnum> enumByVal = null;
-    //根据序列化类型查找对应的序列化类
+    /**
+     * 根据序列化类型查找对应的序列化类
+     */
     public static SerializationTypeEnum getEnumByVal(byte val){
         if(enumByVal == null){
             enumByVal = new HashMap<>();

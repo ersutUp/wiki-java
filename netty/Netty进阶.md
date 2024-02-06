@@ -1034,3 +1034,119 @@ ch.pipeline().addLast(new ChannelDuplexHandler(){
 ```
 
 **注意：**客户端发送心跳的频率要高于服务端检测的频率，例如客户端发送频率为8秒一次，那服务端检测要高于8秒
+
+### 3.3 🔥🔥🔥不同序列化方式的适配
+
+通过**接口定义序列化和反序列化**的方法
+
+[MessageSerializar接口类](netty_demo/src/main/java/top/ersut/protocol/chat/message/MessageSerializar.java)
+
+```java
+public interface MessageSerializar {
+
+    <T extends Message> Message deserializer(Class<T> clazz,byte[] msg);
+
+    byte[] serializer(Message message);
+}
+```
+
+**使用枚举实现`MessageSerializar`接口，实现不同的序列化方式**
+
+> 枚举类可实现接口，每个枚举值都需要进行实现
+
+[SerializationTypeEnum枚举类](netty_demo/src/main/java/top/ersut/protocol/chat/message/SerializationTypeEnum.java)
+
+```java
+public enum SerializationTypeEnum implements MessageSerializar {
+    Json((byte) 0x00){
+        Gson gson = new Gson();
+        @Override
+        public <T extends Message> Message deserializer(Class<T> clazz, byte[] msg) {
+            String msgStr = new String(msg, StandardCharsets.UTF_8);
+            Message message = gson.fromJson(msgStr, clazz);
+            return (T)message;
+        }
+
+        @Override
+        public byte[] serializer(Message message) {
+            return gson.toJson(message).getBytes(StandardCharsets.UTF_8);
+        }
+    },
+    Java((byte) 0x01) {
+        
+        ...
+        
+    };
+
+    /**
+     * 给协议头使用的，在协议头重通过该字节标识具体序列化方式
+     */
+    @Getter
+    byte val; //1处
+    SerializationTypeEnum(byte val){
+        this.val = val;
+    }
+
+
+    static Map<Byte,SerializationTypeEnum> enumByVal = null;
+    /**
+     * 根据序列化类型查找对应的序列化类
+     */
+    public static SerializationTypeEnum getEnumByVal(byte val){
+        if(enumByVal == null){
+            enumByVal = new HashMap<>();
+            for (SerializationTypeEnum value : SerializationTypeEnum.values()) {
+                enumByVal.put(value.val,value);
+            }
+        }
+
+        return enumByVal.get(val);
+    }
+}
+```
+
+该枚举类在 1处 添加val属性给协议头使用，`getEnumByVal`方法可以通过该属性查找对应的枚举值；
+
+其中定义了Java和Json两种序列化方式，并实现了序列化方法和反序列化方法。
+
+经过 `SerializationTypeEnum` 实现 `MessageSerializar` 接口，可以🌞**简化处理器解码的代码**，避免 if else 和 switch；并且**方便扩展后期添加不同的序列化方式（例如xml）只需要在`SerializationTypeEnum`类中添加一个新的枚举值**
+
+```java
+public class ChatMessageCustomCodecSharable extends MessageToMessageCodec<ByteBuf, Message> {
+
+    ...
+    
+    @Override
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+        
+        ...
+          
+        //序列化方式
+        byte serialization = in.readByte();
+        //消息类型
+        byte msgType = in.readByte();
+        
+        ...
+        
+        //长度
+        int length = in.readInt();
+
+        if (length != 0){
+            byte[] content = new byte[length];
+            in.readBytes(content);
+
+            //消息类型对象
+            Class<Message> classByType = MessageTypeEnum.getClassByType(msgType);//1处
+            //反序列化消息
+            Message message = SerializationTypeEnum.getEnumByVal(serialization).deserializer(classByType,content);//2处
+
+            //将读取的内容传给下一个处理器
+            out.add(message);
+        } else {
+            log.info("长度值与数据不匹配");
+        }
+    }
+}
+```
+
+使用1处和2处的两行代码解决了反序列化数据
