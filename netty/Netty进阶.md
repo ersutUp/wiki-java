@@ -1150,3 +1150,38 @@ public class ChatMessageCustomCodecSharable extends MessageToMessageCodec<ByteBu
 ```
 
 使用1处和2处的两行代码解决了反序列化数据
+
+## 四、参数🛠
+
+#### 4.1 CONNECT_TIMEOUT_MILLIS（链接超时）
+
+**连接服务器超时的毫秒**
+
+测试环境：服务端未开启
+
+- windows：
+  - 设置为 300 毫秒，当超过 300  毫秒未连接成功，则报错 ConnectTimeoutException（netty的报错）
+  - 设置为 5000毫秒，当超过 2000 毫秒未连接成功，则报错 ConnectException （java的报错），是因为底层链接服务端失败的报错
+- Mac：
+  - 未复现 ConnectTimeoutException 错误；
+  - 只报错 ConnectException（应该是与windows底层逻辑不一样）。
+
+[代码](netty_demo/src/main/test/top/ersut/netty/option/ConnectTimeoutTest.java)
+
+```java
+Bootstrap bootstrap = new Bootstrap();
+ChannelFuture channelFuture = bootstrap
+        .group(nioEventLoopGroup)
+        .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 300)//1处
+        .channel(NioSocketChannel.class)
+        .handler(new LoggingHandler())
+        .connect("localhost", 888);
+
+channelFuture.sync()
+        .channel().closeFuture().sync();
+```
+
+在1处设置了连接服务器的超时时间为300毫秒。
+
+#### 4.2 SO_BACKLOG
+
