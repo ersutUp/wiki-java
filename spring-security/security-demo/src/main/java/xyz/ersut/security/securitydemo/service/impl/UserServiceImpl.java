@@ -8,6 +8,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import xyz.ersut.security.securitydemo.config.security.jwt.LoginUser;
+import xyz.ersut.security.securitydemo.config.security.jwt.token.JwtToken;
 import xyz.ersut.security.securitydemo.pojo.entity.User;
 import xyz.ersut.security.securitydemo.service.UserService;
 import xyz.ersut.security.securitydemo.utils.JwtUtil;
@@ -30,27 +31,18 @@ public class UserServiceImpl implements UserService {
     @Override
     public ResultJson login(User user) {
         //获取 AuthenticationManager
-        Authentication authentication = new UsernamePasswordAuthenticationToken(user.getUserName(),user.getPassword());
-        Authentication authenticate = authenticationManager.authenticate(authentication);
+        JwtToken jwtToken = new JwtToken(user.getUserName(), user.getPassword());
+        Authentication authenticate = authenticationManager.authenticate(jwtToken);
 
         if(Objects.isNull(authenticate)){
             return new ResultJson(ResultSystemCode.AUTH_ERROR,"登录失败");
         }
 
-        //获取数据库中的真实用户
-        LoginUser loginUser = (LoginUser) authenticate.getPrincipal();
-        User userDB = loginUser.getUser();
-        Long userId = userDB.getId();
-
-        //生成 jwt
-        String jwt = JwtUtil.createJWT(userId.toString());
-        Map<String,String> data = new HashMap<String, String>(){
+        Map<String,Object> data = new HashMap<String, Object>(){
             {
-                put("token",jwt);
+                put("token",authenticate.getPrincipal());
             }
         };
-        //放入缓存
-        loginUserCache.put(userId,loginUser);
 
         return ResultJson.generateResultJson(ResultSystemCode.SUCCESS,data);
     }

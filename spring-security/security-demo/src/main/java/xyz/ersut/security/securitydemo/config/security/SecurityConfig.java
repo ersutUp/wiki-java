@@ -1,5 +1,6 @@
 package xyz.ersut.security.securitydemo.config.security;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -14,8 +15,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import xyz.ersut.security.securitydemo.config.security.jwt.MyUserDetailsService;
 import xyz.ersut.security.securitydemo.config.security.jwt.filter.JwtAuthFilter;
+import xyz.ersut.security.securitydemo.config.security.jwt.provider.JwtProvider;
 import xyz.ersut.security.securitydemo.config.security.openapi.filter.OpenAPIFilter;
 import xyz.ersut.security.securitydemo.config.security.openapi.provider.OpenApiAuthenticationProvider;
 
@@ -34,6 +35,9 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
     @Autowired
     private AuthenticationEntryPoint authenticationEntryPoint;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     //配置 用户读取的位置（数据库还是缓存或者内存）
     @Bean
@@ -59,7 +63,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .authorizeRequests()
                 //对于登录接口 允许匿名访问(anonymous)
                 .antMatchers("/user/login","/").anonymous()
-                //对于 /hello 接口,无论是否登录都可以登陆(permitAll)
+                //对于 /hello 接口,无论是否登录都可以访问(permitAll)
                 .antMatchers("/hello").permitAll()
                 //其他接口都需要认证
                 .anyRequest().authenticated();
@@ -71,7 +75,9 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .accessDeniedHandler(accessDeniedHandler);
 
         //将jwt认证过滤器加入Security过滤器链中，并放在 UsernamePasswordAuthenticationFilter 之前
-        http.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+        http
+                .authenticationProvider(new JwtProvider(passwordEncoder(),objectMapper))
+                .addFilterBefore(jwtAuthFilter,UsernamePasswordAuthenticationFilter.class);
 
         http
                 .authenticationProvider(new OpenApiAuthenticationProvider())
