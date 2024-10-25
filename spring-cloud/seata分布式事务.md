@@ -2,6 +2,10 @@
 
 
 
+**基础：[事务的隔离性](./../spring/transaction.md#Isolation)**
+
+
+
 ## Seata术语
 
 **TC (Transaction Coordinator) - 事务协调者**
