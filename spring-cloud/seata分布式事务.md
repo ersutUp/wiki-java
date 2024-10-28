@@ -49,7 +49,7 @@ chatgpt的回答：
 - 如果没有则**获取该全局事务的全局锁，并往全局锁种写入该资源进行锁定**
 - 如果有，则重新查询该资源
 
-### 二阶段流程（AT模式）
+### <div id="AT-2"></div>二阶段流程（AT模式）
 
 官方说明：https://seata.apache.org/zh-cn/docs/overview/what-is-seata#%E4%B8%80%E9%98%B6%E6%AE%B5
 
@@ -82,6 +82,12 @@ chatgpt的回答：
 5. 提交本地事务，并把本地事务的执行结果上报给 TC。
 
 ![图片来源https://www.cnblogs.com/chengxy-nds/p/14046856.html](./images/seata-rollback.png)
+
+## 部署
+
+> 官方的docker-compose部署文档：https://seata.apache.org/zh-cn/docs/ops/deploy-by-docker-compose#nacos-db
+
+docker-compose部署示例：https://github.com/ersutUp/docker-info/tree/master/seata
 
 ## 实操
 

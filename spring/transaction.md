@@ -466,7 +466,7 @@ propagation属性指定传播方式其类型为Propagation(枚举类)，默认�
 - tansactionPropagationByNested测试用例 与 tansactionAndPropagationByRequiresNew测试用例 结果不一致，因为是在父方法抛出异常
 - 总结：
 	- RequiresNew的两个事务并不相关
-	- Nested的事务是嵌套的，主事务回滚嵌套的事务也回滚，嵌套事务回滚主事务不会滚
+	- Nested的事务是嵌套的，主事务回滚嵌套的事务也回滚，嵌套事务回滚主事务不回滚
 
 ## 事务的其他属性
 
