@@ -21,7 +21,7 @@
 
 **每个全局事务都有一个全局锁**
 
-### 全局锁的内容
+### 💡全局锁的内容
 
 - 全局事务id
 - 分支事务id
@@ -36,11 +36,11 @@ chatgpt的回答：
 
 <img src="./images/seata-lock.png" style="zoom: 50%;" />
 
-### 全局锁如何实现写隔离
+### ⭐️全局锁如何实现写隔离
 
 官方的写隔离文档：https://seata.apache.org/zh-cn/docs/overview/what-is-seata#%E6%95%B4%E4%BD%93%E6%9C%BA%E5%88%B6
 
-官方文档指出了描述了写隔离的执行逻辑以及写隔离通过全局锁实现，但是<span style="color:red">未说明全局锁是如何实现的写隔离</span>
+⭐️官方文档指出了描述了写隔离的执行逻辑以及写隔离通过全局锁实现，但是<span style="color:red">未说明全局锁是如何实现的写隔离</span>
 
 **一些个人理解**：
 
@@ -48,6 +48,29 @@ chatgpt的回答：
 
 - 如果没有则**获取该全局事务的全局锁，并往全局锁种写入该资源进行锁定**
 - 如果有，则重新查询该资源
+
+### 🙅🏻‍♀️对写隔离时 避免脏写 的补充
+
+> 先阅读：https://seata.apache.org/zh-cn/docs/user/appendix/isolation#%E6%80%8E%E4%B9%88%E7%94%A8seata%E9%98%B2%E6%AD%A2%E8%84%8F%E5%86%99
+
+[官方文档](https://seata.apache.org/zh-cn/docs/user/appendix/isolation#%E6%80%8E%E4%B9%88%E7%94%A8seata%E9%98%B2%E6%AD%A2%E8%84%8F%E5%86%99)中指出通过 `@GlobalTransactional`注解的事务**未获取到全局锁**抛出`LockConflictException`，未说明重试机制（具体配置项：retryInterval和retryTimes、相关类：`LockRetryController.java`）
+
+官方泳道图：<img src="./images/prevent-dirty-write-by-GlobalTransaction-7a7b3233283a355ca3a609e67841e43c.png" style="zoom:50%;" />
+
+
+
+抛出异常`LockConflictException`后，被捕获并进入`LockRetryController.java`的`sleep`方法休眠，之后再重试。
+
+
+
+与**@GlobalLock + select for update**的区别
+
+- @GlobalLock + select for update：重试时会释放本地锁
+- @GlobalTransactional：重试时不释放本地锁（源码位置`SelectForUpdateExecutor#doExecute`）
+
+[源码部分的解释](./md)
+
+
 
 ### <div id="AT-2"></div>二阶段流程（AT模式）
 
