@@ -10,3 +10,4 @@ spring/**/target/**
 *.class
 netty/netty_demo/**/*.txt
 netty/netty_demo/target/*
+**/target

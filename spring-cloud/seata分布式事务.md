@@ -68,7 +68,7 @@ chatgpt的回答：
 - @GlobalLock + select for update：重试时会释放本地锁
 - @GlobalTransactional：重试时不释放本地锁（源码位置`SelectForUpdateExecutor#doExecute`）
 
-[源码部分的解释](./md)
+[源码部分的解释](./seata源码.md#GlobalLock-select-for-update)
 
 
 
@@ -114,3 +114,61 @@ docker-compose部署示例：https://github.com/ersutUp/docker-info/tree/master/
 
 ## 实操
 
+[示例: springboot-dubbo-seata项目](./demo/springboot-dubbo-seata)
+
+⭐️**测试提交**：org.apache.seata.service.impl.BusinessServiceImpl#purchaseCommit
+
+```java
+@GlobalTransactional(timeoutMills = 300000, name = "spring-dubbo-tx")
+public void purchaseCommit(String userId, String commodityCode, int orderCount) {
+    LOGGER.info("purchase begin ... xid: " + RootContext.getXID());
+    storageService.deduct(commodityCode, orderCount);
+    orderService.create(userId, commodityCode, orderCount);
+}
+```
+
+请求地址：http://127.0.0.1:9991/testCommit
+
+⭐️**测试回滚**：org.apache.seata.service.impl.BusinessServiceImpl#purchaseRollback
+
+```java
+@GlobalTransactional(timeoutMills = 300000, name = "spring-dubbo-tx")
+public void purchaseRollback(String userId, String commodityCode, int orderCount) {
+    LOGGER.info("purchase begin ... xid: " + RootContext.getXID());
+
+    storageService.deduct(commodityCode, orderCount);
+    orderService.create(userId, commodityCode, orderCount);
+
+
+    throw new RuntimeException("random exception mock!");
+}
+```
+
+有异常全局回滚
+
+请求地址：http://127.0.0.1:9991/testRollback
+
+⭐️**测试防止脏写 select for update**：org.apache.seata.service.impl.StorageServiceImpl#deductSelectUpdate
+
+```java
+@GlobalLock    
+public void deductSelectUpdate(String commodityCode, int count) {
+    //这里会尝试获取锁
+    jdbcTemplate.queryForList("select 1 FROM stock_tbl where commodity_code = ? for update",
+            commodityCode);
+
+    jdbcTemplate.update("update stock_tbl set count = count - ? where commodity_code = ?",
+            count, commodityCode);
+    LOGGER.info("Stock Service End ... ");
+
+}
+```
+
+请求地址：http://127.0.0.1:9991/testCommit/select-update
+
+💡**当获取到全局锁时可以正常提交，当获取失败会抛出异常LockWaitTimeoutException，抛出异常前有重试机制**[源码分析](./seata源码.md#select-for-update)
+
+复现获取全局锁失败的情况：
+
+1. 先请求接口 http://127.0.0.1:9991/testRollback/hold-global-lock，这个接口会延迟15秒结束请求，那这段时间就不会释放全局锁。
+2. 请求该方法的接口是就获取全局锁失败，报错`LockWaitTimeoutException`
