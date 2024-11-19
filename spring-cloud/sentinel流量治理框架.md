@@ -31,7 +31,7 @@
 
 
 
-#### 链路限流
+#### 链路限流（strategy：2）
 
 该模式生效需要将 `webContextUnify` 设置为`false`
 
@@ -79,18 +79,103 @@ spring:
         //链路限流模式
         "strategy": 2,
         //链路入口
-        "ref-resource":"/cmity/test"
+        "ref-resource":"/chain/test"
     }
 ]
 ```
 
+说明：当**资源floor**被**`/chain/test`请求**时，限流QPS：500
 
 
 
+#### 调用方限流（limitApp）
+
+> 官方文档：https://sentinelguard.io/zh-cn/docs/flow-control.html 其中的 3.1 根据调用方限流
+
+Sentinel上下文中的 `Context.origin` 参数标明了调用方身份，在spring中每个请求只有一个sentinel的上下文，也就是说**不管这个请求中使用了多少个资源，来源都是一致的**
 
 
 
+##### 💡limitApp参数如何生效？
 
+**1、需要实现`RequestOriginParser`接口**
+
+```java
+public interface RequestOriginParser {
+    String parseOrigin(HttpServletRequest request);
+}
+```
+
+通过`parseOrigin`方法返回的值会赋值给`Context.origin`
+
+**2、通过Filter把实现类注册到WebCallbackManager中**
+
+这里是以Spring Boot为例
+
+```java
+
+@Configuration
+public class SentinelOriginFilterConfig {
+
+    private static final String SENTINEL_ORIGIN = "sentinel-origin";
+
+    @Bean
+    public FilterRegistrationBean SentinelOriginFilter(){
+        FilterRegistrationBean<Filter> sentinelOriginFilter = new FilterRegistrationBean();
+
+        sentinelOriginFilter.setFilter((servletRequest,servletResponse,filterChain)->{
+            WebCallbackManager.setRequestOriginParser((request1)->{
+                //获取请求头的数据
+                String origin = request1.getHeader(SENTINEL_ORIGIN);
+                return StringUtil.isNotBlank(origin) ? origin : "";
+            });
+            filterChain.doFilter(servletRequest,servletResponse);
+        });
+
+        sentinelOriginFilter.addUrlPatterns("/*");
+        //需要注意顺序，要在CommonFilter之前
+        sentinelOriginFilter.setOrder(0);
+        sentinelOriginFilter.setName("sentinelOriginFilter");
+        return sentinelOriginFilter;
+    }
+}
+```
+
+
+
+##### nacos中json示例
+
+```json
+[
+    {
+        "resource":"/limitApp",
+        "count":100,
+        "limit-app":"pc"
+    }
+]
+```
+
+limit-app中的值与请求头 sentinel-origin 的值对应。
+
+这个配置的意思是 **当 ` /limitApp`请求中的`sentinel-origin`请求头的值为`pc`**时 限制QPS：100
+
+
+
+👇🏻下面这个请求**会触发限流**👇🏻
+
+```shell
+curl --location --request GET 'http://127.0.0.1:19966/limitApp' \
+--header 'sentinel-origin: pc'
+```
+
+👇🏻下面这个请求**不会触发限流**👇🏻
+
+```shell
+curl --location --request GET 'http://127.0.0.1:19966/limitApp' \
+--header 'sentinel-origin: app'
+```
+
+👆🏻上面两个链接不同之处就是请求头`sentinel-origin`的值不同👆🏻
 
 
 
