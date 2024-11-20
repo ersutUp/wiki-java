@@ -6,6 +6,42 @@
 
 
 
+## 持久化Nacos
+
+[Spring Boot 示例](./demo/spring-sentinel-demo/src/main/java/com/alibaba/csp/sentinel/demo/config/NacosConfiguration.java)
+
+
+
+Spring Cloud示例，通过配置文件即可
+
+```yaml
+# Spring
+spring: 
+  cloud:
+    sentinel:
+      # nacos配置持久化
+      datasource:
+        ds1:
+          nacos:
+            server-addr: 127.0.0.1:8848
+            dataId: sentinel-gateway-flow
+            groupId: DEFAULT_GROUP
+            data-type: json
+            rule-type: gw-flow
+        ds2:
+          nacos:
+            server-addr: 127.0.0.1:8848
+            dataId: sentinel-api-group-gateway
+            groupId: DEFAULT_GROUP
+            data-type: json
+            rule-type: gw-api-group
+
+```
+
+
+
+
+
 ## 规则的类型
 
 ### 流量控制规则(FlowRule)
@@ -26,8 +62,6 @@
 |    strategy     | 调用关系限流策略：0：直接、1：关联、2：链路                  | 根据资源本身（直接）          |
 | controlBehavior | 流控效果（0：直接拒绝 /1： 慢启动模式 / 2：排队等待），不支持按调用关系限流 | 直接拒绝                      |
 |   refResource   | 相关的资源，strategy为关联模式或链路模式时使用               | ""                            |
-
-#### 
 
 
 
@@ -79,12 +113,17 @@ spring:
         //链路限流模式
         "strategy": 2,
         //链路入口
-        "ref-resource":"/chain/test"
+        "ref-resource":"/chain/flow"
     }
 ]
 ```
 
-说明：当**资源floor**被**`/chain/test`请求**时，限流QPS：500
+说明：当**资源floor**被**`/chain/flow`请求**时，限流QPS：500
+
+##### 代码demo
+
+- [配置](./demo/spring-sentinel-demo/src/main/java/com/alibaba/csp/sentinel/demo/config/FilterConfig.java)
+- 请求：http://127.0.0.1:19966/chain/flow
 
 
 
@@ -98,6 +137,8 @@ Sentinel上下文中的 `Context.origin` 参数标明了调用方身份，在spr
 
 ##### 💡limitApp参数如何生效？
 
+> Spring-boot中需要把 CommonFilter 添加到过滤器中
+
 **1、需要实现`RequestOriginParser`接口**
 
 ```java
@@ -108,38 +149,44 @@ public interface RequestOriginParser {
 
 通过`parseOrigin`方法返回的值会赋值给`Context.origin`
 
-**2、通过Filter把实现类注册到WebCallbackManager中**
+**2、通过InitializingBean接口把实现类注册到WebCallbackManager中**
 
 这里是以Spring Boot为例
 
 ```java
+package com.alibaba.csp.sentinel.demo.config;
 
 @Configuration
-public class SentinelOriginFilterConfig {
+public class InitConfig {
 
-    private static final String SENTINEL_ORIGIN = "sentinel-origin";
 
+    /**
+     * 支持limitApp参数
+     */
     @Bean
-    public FilterRegistrationBean SentinelOriginFilter(){
-        FilterRegistrationBean<Filter> sentinelOriginFilter = new FilterRegistrationBean();
+    public RequestOriginParserInit requestOriginParserInit(){
+        return new RequestOriginParserInit();
+    }
 
-        sentinelOriginFilter.setFilter((servletRequest,servletResponse,filterChain)->{
+
+    public static class RequestOriginParserInit implements InitializingBean{
+        private static final String SENTINEL_ORIGIN = "sentinel-origin";
+
+        @Override
+        public void afterPropertiesSet() throws Exception {
             WebCallbackManager.setRequestOriginParser((request1)->{
-                //获取请求头的数据
                 String origin = request1.getHeader(SENTINEL_ORIGIN);
                 return StringUtil.isNotBlank(origin) ? origin : "";
             });
-            filterChain.doFilter(servletRequest,servletResponse);
-        });
 
-        sentinelOriginFilter.addUrlPatterns("/*");
-        //需要注意顺序，要在CommonFilter之前
-        sentinelOriginFilter.setOrder(0);
-        sentinelOriginFilter.setName("sentinelOriginFilter");
-        return sentinelOriginFilter;
+        }
     }
+
 }
+
 ```
+
+⭐️**为什么要注册到WebCallbackManager中**，[看源码](./sentinel源码.md#RequestOriginParser)
 
 
 
@@ -176,6 +223,17 @@ curl --location --request GET 'http://127.0.0.1:19966/limitApp' \
 ```
 
 👆🏻上面两个链接不同之处就是请求头`sentinel-origin`的值不同👆🏻
+
+
+
+##### 代码demo
+
+- [配置](./demo/spring-sentinel-demo/src/main/java/com/alibaba/csp/sentinel/demo/config/InitConfig.java)
+- 请求：http://127.0.0.1:19966/limitApp ， header头的key：sentinel-origin
+
+
+
+
 
 
 
