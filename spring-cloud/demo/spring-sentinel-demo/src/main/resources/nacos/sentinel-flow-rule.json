@@ -1,0 +1,23 @@
+[
+  {
+    "resource":"floor",
+    "count":500,
+    "strategy": 2,
+    "ref-resource":"/chain/flow"
+  },
+  {
+    "resource":"query",
+    "count":300
+  },
+  {
+    "resource":"/limitApp",
+    "count":100,
+    "limit-app":"pc"
+  },
+  {
+    "resource":"/form/get",
+    "count":300,
+    "strategy": 1,
+    "ref-resource":"/form/add"
+  }
+]

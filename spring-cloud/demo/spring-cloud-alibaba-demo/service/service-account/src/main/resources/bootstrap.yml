@@ -1,0 +1,23 @@
+server:
+  port: 13851
+
+spring:
+  application:
+    name: @project.artifactId@
+  profiles:
+    active: dev
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS-SERVER-ADDR:127.0.0.1:8848}
+        group: @project.parent.groupId@
+      config:
+        server-addr: ${NACOS-SERVER-ADDR:127.0.0.1:8848}
+        group: @project.parent.groupId@
+        file-extension: yml
+        shared-configs:
+          - data-id: application-${spring.profiles.active}.${spring.cloud.nacos.config.file-extension}
+            group: @project.parent.groupId@
+
+
+

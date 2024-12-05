@@ -17,6 +17,8 @@ package com.alibaba.csp.sentinel.demo.config;
 
 import com.alibaba.csp.sentinel.datasource.ReadableDataSource;
 import com.alibaba.csp.sentinel.datasource.nacos.NacosDataSource;
+import com.alibaba.csp.sentinel.slots.block.degrade.DegradeRule;
+import com.alibaba.csp.sentinel.slots.block.degrade.DegradeRuleManager;
 import com.alibaba.csp.sentinel.slots.block.flow.FlowRule;
 import com.alibaba.csp.sentinel.slots.block.flow.FlowRuleManager;
 import com.alibaba.fastjson.JSON;
@@ -35,19 +37,35 @@ import java.util.List;
 public class NacosConfiguration {
 
     @Bean
-    public ReadableDataSource SentinelFlowRuleNacosConf(SentinelNacosProperties sentinelNacosProperties) {
+    public ReadableDataSource sentinelFlowRuleNacosConf(SentinelNacosProperties sentinelNacosProperties) {
         // remoteAddress 代表 Nacos 服务端的地址
         // groupId 和 dataId 对应 Nacos 中相应配置
         ReadableDataSource<String, List<FlowRule>> flowRuleDataSource = new NacosDataSource<>(
                 sentinelNacosProperties.getRemoteAddress(),
                 sentinelNacosProperties.getGroupId(),
-                sentinelNacosProperties.getDataId(),
+                sentinelNacosProperties.getFlowDataId(),
                 source -> JSON.parseObject(source, new TypeReference<List<FlowRule>>() {})
         );
 
         FlowRuleManager.register2Property(flowRuleDataSource.getProperty());
 
         return flowRuleDataSource;
+
+    }
+    @Bean
+    public ReadableDataSource SentinelDegradeRuleNacosConf(SentinelNacosProperties sentinelNacosProperties) {
+        // remoteAddress 代表 Nacos 服务端的地址
+        // groupId 和 dataId 对应 Nacos 中相应配置
+        ReadableDataSource<String, List<DegradeRule>> degradeRuleDataSource = new NacosDataSource<>(
+                sentinelNacosProperties.getRemoteAddress(),
+                sentinelNacosProperties.getGroupId(),
+                sentinelNacosProperties.getDegradeDataId(),
+                source -> JSON.parseObject(source, new TypeReference<List<DegradeRule>>() {})
+        );
+
+        DegradeRuleManager.register2Property(degradeRuleDataSource.getProperty());
+
+        return degradeRuleDataSource;
 
     }
 

@@ -63,6 +63,21 @@ spring:
 | controlBehavior | 流控效果（0：直接拒绝 /1： 慢启动模式 / 2：排队等待），不支持按调用关系限流 | 直接拒绝                      |
 |   refResource   | 相关的资源，strategy为关联模式或链路模式时使用               | ""                            |
 
+#### 单资源限流
+
+FlowRule限流对象如下（使用nacos中json表示）
+
+```json
+[
+    {
+        "resource":"query",
+        "count":300
+    }
+]
+```
+
+当query资源QPS达到300时进行限流
+
 
 
 #### 链路限流（strategy：2）
@@ -73,7 +88,7 @@ spring:
 
 | 值    | 描述                                                         | 从控制台中观察                                     |
 | ----- | ------------------------------------------------------------ | -------------------------------------------------- |
-| false | 将url设置为该链路的根资源名                                  | [点击查看图片](./images/webContextUnify-false.png) |
+| false | 将URL中的Path设置为该链路的根资源名                          | [点击查看图片](./images/webContextUnify-false.png) |
 | true  | 根资源为 sentinel_web_servlet_context（spring cloud中是sentinel_spring_web_context） | [点击查看图片](./images/webContextUnify-true.png)  |
 
 spring boot中配置：
@@ -102,7 +117,7 @@ spring:
       web-context-unify: false
 ```
 
-##### nacos中json示例
+##### FlowRule限流对象如下（使用nacos中json表示）
 
 ```json
 [
@@ -190,7 +205,7 @@ public class InitConfig {
 
 
 
-##### nacos中json示例
+##### FlowRule对象如下（使用nacos中json表示）
 
 ```json
 [
@@ -233,13 +248,75 @@ curl --location --request GET 'http://127.0.0.1:19966/limitApp' \
 
 
 
+#### 关联限流（strategy：1）
+
+官方说明：
+
+当两个资源之间具有资源争抢或者依赖关系的时候，这两个资源便具有了关联。
+
+比如对数据库同一个字段的读操作和写操作存在争抢，读的速度过高会影响写得速度，写的速度过高会影响读的速度。如果放任读写操作争抢资源，则争抢本身带来的开销会降低整体的吞吐量。可使用关联限流来避免具有关联关系的资源之间过度的争抢，举例来说，`read_db` 和 `write_db` 这两个资源分别代表数据库读写，我们可以给 `read_db` 设置限流规则来达到写优先的目的：设置 `FlowRule.strategy` 为 `RuleConstant.RELATE` 同时设置 `FlowRule.ref_identity` 为 `write_db`。这样当写库操作过于频繁时，读数据的请求会被限流。
 
 
 
+这个配置的FlowRule对象如下：（使用Nacos中的json表示）
+
+```json
+[
+    {
+        //资源名
+        "resource":"read_db",
+        "count":500,
+        //链路限流模式
+        "strategy": 1,
+        //链路入口
+        "ref-resource":"write_db"
+    }
+]
+```
+
+当资源`write_db`的QPS达到500时，资源`read_db`被限流。
 
 
 
-限流过滤
+##### 其他例子，两个关联的链接限流
+
+**创建表单链接**和**获取表单信息链接**，当创建表单的QPS达到300时，对获取表单进行限流。
+
+```java
+package com.alibaba.csp.sentinel.demo.controller;
+
+@RestController
+public class FlowDemoController {
+    //获取表单信息
+    @GetMapping("/form/get")
+    public String formGet() {
+        return "ok";
+    }
+
+    //创建表单
+    @GetMapping("/form/add")
+    public String formAdd() {
+        return "ok";
+    }
+}
+```
+
+
+
+**FlowRule限流对象如下（使用nacos中json表示）**
+
+```json
+[ 
+    {
+        "resource":"/form/get",
+        "count":300,
+        "strategy": 1,
+        "ref-resource":"/form/add"
+    }
+]
+```
+
+说明：当**创建表单的QPS达到300**时，获取表单信息被限流
 
 
 

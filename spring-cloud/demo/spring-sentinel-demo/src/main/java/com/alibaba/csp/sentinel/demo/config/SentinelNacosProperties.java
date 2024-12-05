@@ -12,7 +12,9 @@ public class SentinelNacosProperties{
 
     public String groupId;
 
-    public String dataId;
+    public String flowDataId;
+
+    public String degradeDataId;
 
     public String getRemoteAddress() {
         return remoteAddress;
@@ -30,11 +32,19 @@ public class SentinelNacosProperties{
         this.groupId = groupId;
     }
 
-    public String getDataId() {
-        return dataId;
+    public String getFlowDataId() {
+        return flowDataId;
     }
 
-    public void setDataId(String dataId) {
-        this.dataId = dataId;
+    public void setFlowDataId(String flowDataId) {
+        this.flowDataId = flowDataId;
+    }
+
+    public String getDegradeDataId() {
+        return degradeDataId;
+    }
+
+    public void setDegradeDataId(String degradeDataId) {
+        this.degradeDataId = degradeDataId;
     }
 }

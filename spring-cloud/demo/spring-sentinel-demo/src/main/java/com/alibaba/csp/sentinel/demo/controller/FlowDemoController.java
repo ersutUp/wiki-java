@@ -29,4 +29,15 @@ public class FlowDemoController {
         return community.limit();
     }
 
+
+    @GetMapping("/form/get")
+    public String formGet() {
+        return "ok";
+    }
+
+    @GetMapping("/form/add")
+    public String formAdd() {
+        return "ok";
+    }
+
 }

@@ -1,0 +1,43 @@
+server:
+  port: 13850
+
+spring:
+  application:
+    name: @project.artifactId@
+  profiles:
+    active: dev
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS-SERVER-ADDR:127.0.0.1:8848}
+        group: @project.parent.groupId@
+      config:
+        server-addr: ${NACOS-SERVER-ADDR:127.0.0.1:8848}
+        group: @project.parent.groupId@
+        file-extension: yml
+        shared-configs:
+          - data-id: application-${spring.profiles.active}.${spring.cloud.nacos.config.file-extension}
+            group: @project.parent.groupId@
+    sentinel:
+      enabled: true
+      transport:
+        dashboard: ${sentinel-dashboard:127.0.0.1:8080}
+      filter:
+        enabled: false
+      datasource:
+        ds0:
+          nacos:
+            server-addr: ${NACOS-SERVER-ADDR:127.0.0.1:8848}
+            group-id: @project.parent.groupId@
+            data-id: alibaba-gateway-demo-flow.json
+            rule-type: gw_flow
+        ds1:
+          nacos:
+            server-addr: ${NACOS-SERVER-ADDR:127.0.0.1:8848}
+            group-id: @project.parent.groupId@
+            data-id: alibaba-gateway-demo-api.json
+            rule-type: gw_api_group
+
+
+
+
