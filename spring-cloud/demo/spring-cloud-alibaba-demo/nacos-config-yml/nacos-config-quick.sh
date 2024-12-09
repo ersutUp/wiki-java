@@ -17,10 +17,15 @@ curl -X POST "$host/nacos/v1/cs/configs" -d "type=yaml&dataId=alibaba-gateway.ym
 curl -X POST "$host/nacos/v1/cs/configs" -d "type=yaml&dataId=alibaba-gateway-dev.yml&group=${groupId}&content=${alibabaGatewayDevConfig}"
 curl -X POST "$host/nacos/v1/cs/configs" -d "type=yaml&dataId=alibaba-gateway-prod.yml&group=${groupId}&content=${alibabaGatewayProdConfig}"
 
-sentinelApiConfig=$(cat ./alibaba-gateway-sentinel-api.json)
-sentinelFlowConfig=$(cat ./alibaba-gateway-sentinel-flow.json)
+sentinelApiConfig=$(cat ./sentinel/alibaba-gateway-sentinel-api.json)
+sentinelFlowConfig=$(cat ./sentinel/alibaba-gateway-sentinel-flow.json)
 curl -X POST "$host/nacos/v1/cs/configs" -d "type=json&dataId=alibaba-gateway-sentinel-api.json&group=${groupId}&content=${sentinelApiConfig}"
 curl -X POST "$host/nacos/v1/cs/configs" -d "type=json&dataId=alibaba-gateway-sentinel-flow.json&group=${groupId}&content=${sentinelFlowConfig}"
+
+sentinelServiceOrderFlowConfig=$(cat ./sentinel/service-order-flow.json)
+curl -X POST "$host/nacos/v1/cs/configs" -d "type=json&dataId=service-order-flow.json&group=${groupId}&content=${sentinelServiceOrderFlowConfig}"
+sentinelServiceOrderAuthorityConfig=$(cat ./sentinel/service-order-authority.json)
+curl -X POST "$host/nacos/v1/cs/configs" -d "type=json&dataId=service-order-authority.json&group=${groupId}&content=${sentinelServiceOrderAuthorityConfig}"
 
 
 echo "Nacos config pushed successfully finished"

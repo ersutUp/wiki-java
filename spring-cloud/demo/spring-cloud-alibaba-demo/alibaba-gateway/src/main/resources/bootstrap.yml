@@ -21,7 +21,7 @@ spring:
     sentinel:
       enabled: true
       transport:
-        dashboard: ${sentinel-dashboard:127.0.0.1:8080}
+        dashboard: ${SENTINEL-DASHBOARD:127.0.0.1:8718}
       filter:
         enabled: false
       datasource:

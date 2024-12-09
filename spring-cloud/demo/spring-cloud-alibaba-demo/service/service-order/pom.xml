@@ -21,6 +21,11 @@
 
         <dependency>
             <groupId>xyz.ersut.demo.alibabacloud</groupId>
+            <artifactId>module-sentinel</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>xyz.ersut.demo.alibabacloud</groupId>
             <artifactId>client-account</artifactId>
         </dependency>
 

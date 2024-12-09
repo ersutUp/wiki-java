@@ -14,6 +14,7 @@
         <module>service</module>
         <module>client</module>
         <module>common</module>
+        <module>module</module>
     </modules>
 
     <properties>
@@ -27,6 +28,12 @@
 
     <dependencyManagement>
         <dependencies>
+
+            <dependency>
+                <groupId>xyz.ersut.demo.alibabacloud</groupId>
+                <artifactId>module-sentinel</artifactId>
+                <version>${project.version}</version>
+            </dependency>
 
             <dependency>
                 <groupId>xyz.ersut.demo.alibabacloud</groupId>
