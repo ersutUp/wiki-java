@@ -5,21 +5,24 @@ import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.annotation.Order;
+import xyz.ersut.common.constant.RequestConstants;
 
 import java.util.Objects;
 
 @AutoConfiguration
 @Order
 public class SentinelAutoConfig {
-    public static final String SENTINEL_ORIGIN = "sentinel-origin";
 
+    /**
+     * 设置sentinel的来源
+     */
     @ConditionalOnMissingBean
     @Bean
     public RequestOriginParser RequestOriginParser(){
         return (request) -> {
-            String header = request.getHeader(SENTINEL_ORIGIN);
+            String header = request.getHeader(RequestConstants.REQUEST_SERVER);
             if(Objects.isNull(header) || header.isBlank()){
-                return "";
+                return "null";
             }
             return header;
         };

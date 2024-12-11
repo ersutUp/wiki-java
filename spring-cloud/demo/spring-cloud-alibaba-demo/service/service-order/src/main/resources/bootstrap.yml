@@ -23,11 +23,6 @@ spring:
           - data-id: application-${spring.profiles.active}.${spring.cloud.nacos.config.file-extension}
             group: ${project-nacos.group}
     sentinel:
-      enabled: true
-      #不使用统一上下文名称
-      web-context-unify: false
-      transport:
-        dashboard: ${SENTINEL-DASHBOARD:127.0.0.1:8718}
       datasource:
         ds0:
           nacos:

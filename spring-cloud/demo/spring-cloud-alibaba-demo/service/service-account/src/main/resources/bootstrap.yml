@@ -19,5 +19,3 @@ spring:
           - data-id: application-${spring.profiles.active}.${spring.cloud.nacos.config.file-extension}
             group: @project.parent.groupId@
 
-
-

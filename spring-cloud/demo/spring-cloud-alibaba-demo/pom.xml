@@ -31,6 +31,12 @@
 
             <dependency>
                 <groupId>xyz.ersut.demo.alibabacloud</groupId>
+                <artifactId>module-feign</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>xyz.ersut.demo.alibabacloud</groupId>
                 <artifactId>module-sentinel</artifactId>
                 <version>${project.version}</version>
             </dependency>

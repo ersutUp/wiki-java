@@ -19,6 +19,11 @@
 
     <dependencies>
 
+        <dependency>
+            <groupId>xyz.ersut.demo.alibabacloud</groupId>
+            <artifactId>common-core</artifactId>
+        </dependency>
+
         <!-- SpringCloud Gateway -->
         <dependency>
             <groupId>org.springframework.cloud</groupId>

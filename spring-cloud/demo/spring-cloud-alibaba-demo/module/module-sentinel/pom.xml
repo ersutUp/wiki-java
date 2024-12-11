@@ -20,8 +20,8 @@
     <dependencies>
 
         <dependency>
-            <groupId>com.alibaba.csp</groupId>
-            <artifactId>sentinel-spring-webmvc-v6x-adapter</artifactId>
+            <groupId>com.alibaba.cloud</groupId>
+            <artifactId>spring-cloud-starter-alibaba-sentinel</artifactId>
         </dependency>
 
         <dependency>

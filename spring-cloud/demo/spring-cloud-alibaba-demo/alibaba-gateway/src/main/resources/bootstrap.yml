@@ -15,9 +15,6 @@ spring:
         server-addr: ${NACOS-SERVER-ADDR:127.0.0.1:8848}
         group: @project.parent.groupId@
         file-extension: yml
-        shared-configs:
-          - data-id: application-${spring.profiles.active}.${spring.cloud.nacos.config.file-extension}
-            group: @project.parent.groupId@
     sentinel:
       enabled: true
       transport:

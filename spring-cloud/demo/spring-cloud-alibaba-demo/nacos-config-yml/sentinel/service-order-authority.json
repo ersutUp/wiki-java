@@ -1,7 +1,7 @@
 [
   {
     "resource": "/order",
-    "limitApp": "h5,pc,mobile,H5,PC,MOBILE",
+    "limitApp": "alibaba-gateway",
     "strategy": 0
   }
 ]

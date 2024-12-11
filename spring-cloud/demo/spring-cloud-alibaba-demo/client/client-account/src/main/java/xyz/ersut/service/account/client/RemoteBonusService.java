@@ -5,17 +5,17 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import xyz.ersut.common.constant.ServiceConstants;
-import xyz.ersut.module.feign.config.RequestInterceptorAutoConfig;
 import xyz.ersut.service.account.client.fallback.RemoteAccountFallbackFactory;
 
 @FeignClient(
         value = ServiceConstants.SERVICE_ACCOUNT,
-        contextId = "remoteAccountService",
-        fallbackFactory = RemoteAccountFallbackFactory.class
+        contextId = "remoteBonusService",
+        fallbackFactory = RemoteAccountFallbackFactory.class,
+        path = "/bonus"
 )
-public interface RemoteAccountService {
+public interface RemoteBonusService {
 
-    @PutMapping("/account/pay")
-    String pay(@RequestParam int amount);
+    @PostMapping("/promotion")
+    String promotion(@RequestParam int amount);
 
 }
