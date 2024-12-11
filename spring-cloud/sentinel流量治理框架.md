@@ -324,11 +324,93 @@ public class FlowDemoController {
 
 
 
+spring cloud Gateway 集成 sentinel 不支持熔断，一般来说**使用在服务与服务之间的调用，或者服务与第三方服务直接的调用。**
+
+例如：集成在`Feign`中，请求异常时进行熔断降级。[示例代码](./demo/spring-cloud-alibaba-demo/client/client-account/src/main/java/xyz/ersut/service/account/client/RemoteAccountService.java)
+
+
+
 ### 系统保护规则(SystemRule)
 
+——
+
+### 黑白名单规则/来源访问控制(AuthorityRule)
+
+通过来源（`ContextUtil.enter(contextName, origin);`,参数2就是来源）控制资源是否可以访问。
 
 
-### 黑白名单规则(AuthorityRule)
+
+#### 有两个模式：
+
+- 白名单
+
+  - 示例：
+
+    ```json
+      {
+        "resource": "/order",
+        "limitApp": "h5,pc",
+        "strategy": 0
+      }
+    ```
+
+    只允许来源是h5和pc
+
+- 黑名单
+
+  - 示例：
+
+    ```json
+      {
+        "resource": "/order1",
+        "limitApp": "mobile",
+        "strategy": 1
+      }
+    ```
+
+    拒绝来源是mobile，其他都允许
+
+💡注意：
+
+- 如果**来源是空值，是允许访问**，不受黑白名单的控制。
+- **一个资源只允许一个模式**，要么黑名单模式要么白名单模式。
+
+
+
+#### 自定义来源：
+
+Spring Cloud中通过实现 RequestOriginParser 接口，并注入到bean中生效。
+
+```java
+    @Bean
+    public RequestOriginParser RequestOriginParser(){
+        return (request) -> {
+            //从请求头中获取来源
+            String header = request.getHeader(RequestConstants.REQUEST_SERVER);
+            if(Objects.isNull(header) || header.isBlank()){
+                //这里是为了避免空串，不受黑白名单控制，所以返回字符串"null"
+                return "null";
+            }
+            return header;
+        };
+    }
+```
+
+[示例代码](./demo/spring-cloud-alibaba-demo/module/module-sentinel/src/main/java/xyz/ersut/module/sentinel/config/SentinelAutoConfig.java)
+
+
+
+#### 适用场景
+
+- 通过黑名单控制要拒绝的IP
+  - 但是IP黑名单一般在防火墙做，到不了应用层，除非对IP黑名单有复杂需求，即使有复杂要求也是在过滤器实现。
+- 控制服务的访问
+  - [示例项目](./demo/spring-cloud-alibaba-demo)
+  - 具体代码部分查看标签[sentinel-origin-service-name](/ersutUp/wiki-java/releases/tag/sentinel-origin-service-name)的提交
+
+其他场景暂时未想到。
+
+
 
 
 
