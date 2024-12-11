@@ -406,7 +406,11 @@ Spring Cloud中通过实现 RequestOriginParser 接口，并注入到bean中生�
   - 但是IP黑名单一般在防火墙做，到不了应用层，除非对IP黑名单有复杂需求，即使有复杂要求也是在过滤器实现。
 - 控制服务的访问
   - [示例项目](./demo/spring-cloud-alibaba-demo)
-  - 具体代码部分查看标签[sentinel-origin-service-name](/ersutUp/wiki-java/releases/tag/sentinel-origin-service-name)的提交
+  - 具体代码部分查看标签[sentinel-origin-service-name](https://github.com/ersutUp/wiki-java/releases/tag/sentinel-origin-service-name)的提交
+  - 主要类：
+    - ForwardHeaderFilter    网关转发时将项目名添加header头
+    - SentinelAutoConfig      解析请求头，给sentinel设置来源
+    - RequestInterceptorAutoConfig   fegin请求时添加项目名请求头
 
 其他场景暂时未想到。
 
