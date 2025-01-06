@@ -332,7 +332,7 @@ spring cloud Gateway 集成 sentinel 不支持熔断，一般来说**使用在�
 
 ### 系统保护规则(SystemRule)
 
-——
+过！
 
 ### 黑白名单规则/来源访问控制(AuthorityRule)
 
