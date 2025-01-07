@@ -9,6 +9,8 @@
 - Broker的注册中心
 - 管理Broker的信息，并提供心跳机制金策是否存活。
 - 客户端通过NameServer查找**Broker**
+  - **5.0版本后客户端不直接访问NameServer而是通过Proxy转发数据**
+
 
 ### Broker：消息存储
 
@@ -40,4 +42,88 @@ Proxy支持
 
 
 
-# 领域模型
+## 领域模型
+
+### 概述
+
+**RocketMQ使用的发布订阅模型**
+
+模型图:
+
+![](./images/rocket-mq-model.png)
+
+**Topic**：主题，消息容器的名称，全局唯一。
+
+**Message Queue**：消息队列，真实存储消息的地方。
+
+- 主题内有多个消息队列组成
+
+
+
+**Message**：消息，RocketMQ最小传输单元。
+
+- 存储在消息队列中。
+
+
+
+**Producer**：消息的生产者，创建消息并发送到RocketMQ中。
+
+**Consumer**：消息的消费者，处理收到的消息。
+
+**Subscription**：订阅关系，处理消息的过滤规则。
+
+**Consumer Group**：消费者分组，把相同的消费者放入一个组中，统一定义订阅关系（Subscription）、重试机制、消费者负责均衡等。
+
+- 一个消费者组可以有多个订阅关系。
+
+
+
+#### 一条消息的生产到消费
+
+```mermaid
+graph LR
+st([开始])
+en([结束])
+msg-pro[生产者]
+Topic[匹配Topic]
+queue[存入消息队列]
+msg-con-group[消费者组]
+msg-con[消费者1]
+msg-con2[消费者2]
+msg-con3[消费者3]
+sub[通过订阅关系过滤消息]
+st-->msg-pro
+msg-pro--消息-->Topic
+Topic--消息-->queue
+queue--消息-->sub
+sub--消息-->msg-con-group
+msg-con-group--消息-->msg-con
+msg-con---->en
+msg-con-group-.->msg-con3
+msg-con-group-.->msg-con2
+
+```
+
+
+
+
+
+
+
+### Topic：主题
+
+
+
+### Queue：队列
+
+
+
+### Message：消息
+
+
+
+### Producer：生产者
+
+
+
+### Consumer：消费者
