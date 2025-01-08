@@ -17,7 +17,7 @@ Spring AOP底层通过动态代理进行功能扩展
 	4. 由于接口类的static方法的具体实现是由本类实现的，所有实现类无法重写static方法，这代表着代理类无法代理static方法
 	5. [项目示例](./spring-framework-demo/AOP-dynamicProxy-JDK),部分代码：
 		1. 接口:必须有接口不然JDK动态代理无法实现
-		```
+		```java
 		public interface UserServer {
 		    void add();
 		    void all();
@@ -25,7 +25,7 @@ Spring AOP底层通过动态代理进行功能扩展
 		```
 
 		2. 调用处理器:动态代理处理的事情（invoke方法内,他是InvocationHandler的方法）
-		```
+		```java
 		public class MyInvocationHandler implements InvocationHandler {
 
 		    private Object obj;
@@ -52,7 +52,7 @@ Spring AOP底层通过动态代理进行功能扩展
 				3. 形参 h 是调用处理器
 				4. 返回对象是生成的代理类对象
 			2. 代码
-			```
+			```java
 		    @Test
 		    void tset() {
 		        //不使用代理
@@ -73,7 +73,7 @@ Spring AOP底层通过动态代理进行功能扩展
 		    }
 			```
 	4. 动态代理生成的代理类，[查看内存中的类](./../base/memory-class.md)
-	```
+	```java
 	public final class $Proxy9 extends Proxy
 	  implements UserServer
 	{
@@ -137,14 +137,14 @@ Spring AOP底层通过动态代理进行功能扩展
 	1. 生成当前类的子类（代理类），进行扩展
 	2. 由于CGLIB代理是通过子类实现的，那么代理类的 final 方法、private 方法 无法代理。
 	3. CGLIB未实现代理static方法,即使实现了也需要通过反射去调用,类似下面代码比较麻烦
-	```
+	```java
 	Object userServerObject = Enhancer.create(UserServer.class,null,new MyMethodInterceptor());
 	Method addStatic = userServerObject.getClass().getMethod("addStatic");
     addStatic.invoke(userServerObject,null);
 	```
 	4. [项目示例](./spring-framework-demo/AOP-dynamicProxy-CGLIB),部分代码
 		1. 被代理的类
-		```
+		```java
 		public class UserServer {
 		    public void add() {
 		        System.out.println(this.getClass().getSimpleName()+".add:run");
@@ -157,7 +157,7 @@ Spring AOP底层通过动态代理进行功能扩展
 		```
 
 		2. 回调类，类似JDK动态代理的调用处理器
-		```
+		```java
 		public class MyMethodInterceptor implements MethodInterceptor {
 
 		    /**
@@ -178,7 +178,7 @@ Spring AOP底层通过动态代理进行功能扩展
 		```
 
 		3. 测试方法
-		```
+		```java
 	    @Test
 	    void tset() {
 	        //不使用代理
@@ -200,7 +200,7 @@ Spring AOP底层通过动态代理进行功能扩展
 		```
 
 		4. 生成的代理类,部分代码
-		```
+		```java
 		public class UserServer$$EnhancerByCGLIB$$12fbbc62 extends UserServer implements Factory {
 
 			...
@@ -285,11 +285,18 @@ Spring AOP底层通过动态代理进行功能扩展
 将通知应用到切入点的动作称为切面
 
 ## AspectJ
-1. AspectJ实现了AOP思想
-2. AspectJ所采用的静态编织技术（我理解为静态代理的另一种实现方式），而非动态代理实现
-3. AspectJ不受类的特殊限制,不管方法是private、static、final的,都可以代理
 
-### 静态编织是什么
+**一个强大的AOP框架**
+
+- AspectJ 有三种织入方式
+  - 编译时织入(静态编织)：代码编译期间将切面的代码写到字节码中
+  - 类加载时织入：使用 AspectJ 的类加载器（修改字节码）将代切面织入
+  - 运行时织入，Spring AOP采用了这种方式，即JDK动态代理和CGLIB
+
+**前两种方式不受类的特殊限制,不管方法是private、static、final的,都可以增强**
+
+💡静态编织是什么
+
 在编译期或者编译后将增强逻辑织入形成含有增强逻辑的字节码文件。
 
 ### 相关注解
@@ -333,7 +340,7 @@ AspectJ中环绕通知与最终通知、返回通知、异常通知冲突
 
 示例:
 
-```
+```java
 @Pointcut("execution(* top.ersut.aspectj.Admin.login(..))")
 public void loginPointcut(){}
 ```
@@ -343,7 +350,7 @@ public void loginPointcut(){}
 
 示例：
 
-```
+```java
 @After("loginPointcut()")
 public void after(JoinPoint joinPoint){
     System.out.println("最终通知："+joinPoint.getSignature().getName());
@@ -364,7 +371,7 @@ public void afterThrowing(JoinPoint joinPoint){
 
 **aspectj的静态编织依赖maven插件或其他插件实现**，maven相关代码：
 
-```
+```xml
 <build>
     <plugins>
         <plugin>
@@ -400,7 +407,7 @@ public void afterThrowing(JoinPoint joinPoint){
 相比来看字节码文件中多出了很多代码,这些多出来的代码就是静态编织的；这些多出来的代码是根据`AdminAOP.java`类所生成的。
 
 AdminAOP.java
-```
+```java
 @Aspect
 public class AdminAOP{
 
@@ -439,7 +446,7 @@ public class AdminAOP{
 
 ### 依赖包
 
-```
+```xml
 <dependency>
     <groupId>org.springframework</groupId>
     <artifactId>spring-aop</artifactId>
@@ -463,7 +470,7 @@ public class AdminAOP{
 1. 去除aspectj静态编织的maven插件
 2. 将代理类和切面类变为Bean,类上添加@Component注解
 	1. Admin.java
-		```
+		```java
 		@Component
 		public class Admin {
 			...
@@ -471,7 +478,7 @@ public class AdminAOP{
 		```
 
 	2. AdminAOP.java
-		```
+		```java
 		@Component
 		@Aspect
 		public class AdminAOP{
@@ -479,7 +486,7 @@ public class AdminAOP{
 		}
 		```
 3. 创建配置类并开启AOP,@EnableAspectJAutoProxy注解开启Spring AOP
-	```
+	```java
 	@Configuration
 	@ComponentScan(basePackages = {"top.ersut.spring.aop"})
 	//开启Aop
@@ -490,7 +497,7 @@ public class AdminAOP{
 	```
 
 4. 修改单元测试
-	```
+	```java
 	@Test
 	void login() {
 	    ApplicationContext context = new AnnotationConfigApplicationContext(ProjectConf.class);
@@ -528,7 +535,7 @@ public class AdminAOP{
 
 
 AdminAOP.java
-```
+```java
 
 @Order(2)
 @Component
@@ -549,7 +556,7 @@ public class AdminAOP2 {
 ```
 
 执行逻辑
-```
+```java
 AdminAOP2的通知
 AdminAOP的通知
 切入点的逻辑
@@ -562,4 +569,9 @@ AdminAOP2的通知
 ### [xml式配置](./spring-framework-demo/AOP-xml),了解就ok
 
 ## JDK动态代理、CGLIB动态代理、AspectJ 与 Spring AOP 之间的关系
-Spring AOP 修改了 AspectJ 框架的部分实现，将 AspectJ 的静态编织调整为动态代理(JDK、CGLIB)实现。
+
+- Spring AOP 是基于 AspectJ 的 AOP 实现
+- AspectJ 有三种织入方式
+  - 编译时织入：代码编译期间将切面的代码写到字节码中
+  - 类加载时织入：使用 AspectJ 的类加载器将代切面织入
+  - 运行时织入，Spring AOP采用了这种方式，即JDK动态代理和CGLIB
