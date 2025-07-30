@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ArrayList工作原理可视化 - 单次演示</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    
+    <!-- 配置Tailwind自定义颜色和字体 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3b82f6',
+                        secondary: '#10b981',
+                        accent: '#f59e0b',
+                        danger: '#ef4444',
+                        dark: '#1e293b',
+                        light: '#f8fafc'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .array-cell {
+                @apply w-12 h-12 flex items-center justify-center border-2 rounded-md transition-all duration-300 text-sm md:text-base relative;
+            }
+            .array-cell-occupied {
+                @apply bg-primary text-white border-primary;
+            }
+            .array-cell-empty {
+                @apply bg-gray-100 text-gray-400 border-gray-300;
+            }
+            .array-cell-highlighted {
+                @apply bg-accent border-accent scale-110;
+            }
+            .array-cell-deleted {
+                @apply bg-danger border-danger;
+            }
+            .array-cell-moving {
+                @apply bg-purple-500 border-purple-600;
+            }
+            .array-cell-next {
+                @apply border-yellow-500 ring-2 ring-yellow-300;
+            }
+            .array-cell-new {
+                @apply border-green-500 ring-2 ring-green-300 animate-pulse;
+            }
+            .move-indicator {
+                @apply absolute -top-6 left-1/2 -translate-x-1/2 text-xs font-bold text-purple-600 animate-bounce;
+            }
+            .expand-indicator {
+                @apply text-green-600 font-bold animate-pulse;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans text-dark min-h-screen flex flex-col">
+    <!-- 顶部导航 -->
+    <header class="bg-white shadow-md">
+        <div class="container mx-auto px-4 py-6">
+            <h1 class="text-[clamp(1.5rem,3vw,2.5rem)] font-bold text-center text-primary">
+                <i class="fa fa-code-fork mr-2"></i>ArrayList工作原理可视化
+            </h1>
+            <p class="text-center text-gray-600 mt-2">动态展示Java ArrayList的内部结构、元素移动与扩容原理</p>
+        </div>
+    </header>
+
+    <!-- 主要内容区 -->
+    <main class="container mx-auto px-4 py-6 flex-grow">
+        <!-- 控制面板 -->
+        <div class="bg-white rounded-xl shadow-lg p-4 md:p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4 flex items-center">
+                <i class="fa fa-sliders mr-2 text-primary"></i>操作控制
+            </h2>
+            
+            <!-- 操作按钮组 - 优化窄屏适配 -->
+            <div class="space-y-4">
+                <!-- 添加元素 -->
+                <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                    <label for="add-value" class="font-medium sm:w-20">添加元素:</label>
+                    <input type="number" id="add-value" class="border border-gray-300 rounded-md px-3 py-2 flex-grow focus:outline-none focus:ring-2 focus:ring-primary" placeholder="输入数值">
+                    <button id="add-btn" class="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-md transition-colors flex items-center justify-center">
+                        <i class="fa fa-plus mr-1"></i> 添加
+                    </button>
+                </div>
+                
+                <!-- 获取元素 -->
+                <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                    <label for="get-index" class="font-medium sm:w-20">获取索引:</label>
+                    <input type="number" id="get-index" class="border border-gray-300 rounded-md px-3 py-2 flex-grow focus:outline-none focus:ring-2 focus:ring-primary" placeholder="输入索引">
+                    <button id="get-btn" class="bg-secondary hover:bg-secondary/90 text-white px-4 py-2 rounded-md transition-colors flex items-center justify-center">
+                        <i class="fa fa-search mr-1"></i> 获取
+                    </button>
+                </div>
+                
+                <!-- 删除元素 -->
+                <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                    <label for="remove-index" class="font-medium sm:w-20">删除索引:</label>
+                    <input type="number" id="remove-index" class="border border-gray-300 rounded-md px-3 py-2 flex-grow focus:outline-none focus:ring-2 focus:ring-primary" placeholder="输入索引">
+                    <button id="remove-btn" class="bg-danger hover:bg-danger/90 text-white px-4 py-2 rounded-md transition-colors flex items-center justify-center">
+                        <i class="fa fa-trash mr-1"></i> 删除
+                    </button>
+                </div>
+                
+                <div class="flex flex-wrap gap-3 justify-center sm:justify-start pt-2">
+                    <button id="clear-btn" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md transition-colors flex items-center">
+                        <i class="fa fa-refresh mr-1"></i> 清空
+                    </button>
+                    <button id="auto-demo-btn" class="bg-accent hover:bg-accent/90 text-white px-4 py-2 rounded-md transition-colors flex items-center">
+                        <i class="fa fa-play mr-1"></i> 自动演示
+                    </button>
+                </div>
+            </div>
+            
+            <div id="status-message" class="mt-4 p-3 rounded-md bg-blue-50 text-blue-700 hidden">
+                <i class="fa fa-info-circle mr-1"></i> <span id="status-text">操作状态信息</span>
+            </div>
+        </div>
+        
+        <!-- 左右分栏布局 - 动画区和日志区 -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- 左侧：动画展示区 (占2/3宽度) -->
+            <div class="lg:col-span-2">
+                <div class="bg-white rounded-xl shadow-lg p-4 md:p-6 h-full">
+                    <h2 class="text-xl font-semibold mb-4 flex items-center">
+                        <i class="fa fa-cubes mr-2 text-primary"></i>ArrayList 内部结构
+                    </h2>
+                    
+                    <div class="mb-4 flex flex-wrap items-center gap-2 text-sm text-gray-600">
+                        <div><span class="inline-block w-4 h-4 bg-primary rounded-sm mr-1"></span> 已存储元素</div>
+                        <div><span class="inline-block w-4 h-4 bg-gray-100 border border-gray-300 rounded-sm mr-1"></span> 空位置</div>
+                        <div><span class="inline-block w-4 h-4 bg-accent rounded-sm mr-1"></span> 当前操作元素</div>
+                        <div><span class="inline-block w-4 h-4 bg-danger rounded-sm mr-1"></span> 待删除元素</div>
+                        <div><span class="inline-block w-4 h-4 bg-purple-500 rounded-sm mr-1"></span> 移动中的元素</div>
+                        <div><span class="inline-block w-4 h-4 border-2 border-yellow-500 rounded-sm mr-1"></span> 移动元素的目的地</div>
+                        <div><span class="inline-block w-4 h-4 border-2 border-green-500 rounded-sm mr-1"></span> 扩容新增的位置</div>
+                    </div>
+                    
+                    <!-- 数组容量信息 -->
+                    <div class="mb-4 flex flex-wrap justify-between items-center">
+                        <div>
+                            <span class="font-medium">当前容量: </span>
+                            <span id="capacity" class="text-primary font-semibold">10</span>
+                        </div>
+                        <div>
+                            <span class="font-medium">元素数量: </span>
+                            <span id="size" class="text-secondary font-semibold">0</span>
+                        </div>
+                        <div id="growth-indicator" class="hidden text-accent font-medium">
+                            <i class="fa fa-arrow-up"></i> 正在扩容...
+                        </div>
+                    </div>
+                    
+                    <!-- 数组可视化容器 -->
+                    <div id="array-container" class="flex flex-wrap gap-4 justify-center items-center min-h-[120px] py-6 border border-gray-200 rounded-lg bg-gray-50 overflow-x-auto">
+                        <!-- 数组元素将通过JS动态生成 -->
+                    </div>
+                    
+                    <!-- 原理说明 - 窄屏时显示在动画区下方 -->
+                    <div class="mt-6 lg:hidden">
+                        <h2 class="text-xl font-semibold mb-4 flex items-center">
+                            <i class="fa fa-book mr-2 text-primary"></i>ArrayList 原理说明
+                        </h2>
+                        
+                        <div class="space-y-4 text-gray-700 text-sm">
+                            <div>
+                                <h3 class="font-semibold text-primary">删除元素的移动过程</h3>
+                                <p>当从ArrayList中间删除元素时，删除位置后的所有元素会依次向左移动一个位置，填补被删除元素留下的空位。</p>
+                            </div>
+                            <div>
+                                <h3 class="font-semibold text-primary">扩容机制</h3>
+                                <p>当元素数量达到当前容量时，ArrayList会自动扩容为原容量的1.5倍，并将所有元素复制到新数组中。</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 右侧：日志区 (占1/3宽度) -->
+            <div class="lg:col-span-1">
+                <div class="bg-white rounded-xl shadow-lg p-4 md:p-6 h-full flex flex-col">
+                    <h2 class="text-xl font-semibold mb-4 flex items-center">
+                        <i class="fa fa-history mr-2 text-primary"></i>操作日志
+                    </h2>
+                    
+                    <div id="log-container" class="border border-gray-200 rounded-lg flex-grow overflow-y-auto p-3 text-sm bg-gray-50 min-h-[300px]">
+                        <div class="text-gray-500 italic">操作将在这里显示...</div>
+                    </div>
+                    
+                    <!-- 原理说明 - 宽屏时显示在日志区下方 -->
+                    <div class="mt-6 hidden lg:block">
+                        <h2 class="text-xl font-semibold mb-4 flex items-center">
+                            <i class="fa fa-book mr-2 text-primary"></i>ArrayList 原理说明
+                        </h2>
+                        
+                        <div class="space-y-4 text-gray-700 text-sm">
+                            <div>
+                                <h3 class="font-semibold text-primary">删除元素的移动过程</h3>
+                                <p>当从ArrayList中间删除元素时，删除位置后的所有元素会依次向左移动一个位置，填补被删除元素留下的空位。</p>
+                            </div>
+                            <div>
+                                <h3 class="font-semibold text-primary">扩容机制</h3>
+                                <p>当元素数量达到当前容量时，ArrayList会自动扩容为原容量的1.5倍，并将所有元素复制到新数组中。</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="bg-dark text-white py-6 mt-12">
+        <div class="container mx-auto px-4 text-center">
+            <p>ArrayList工作原理可视化演示 | 基于Java集合框架</p>
+            <p class="text-gray-400 text-sm mt-2">© 2023 可视化教学演示</p>
+        </div>
+    </footer>
+
+    <script>
+        // ArrayList模拟类
+        class ArrayListSimulator {
+            constructor(initialCapacity = 10) {
+                this.capacity = initialCapacity;
+                this.size = 0;
+                this.elements = new Array(this.capacity);
+                this.logs = [];
+                
+                // 初始化日志
+                this.log(`初始化ArrayList，初始容量: ${this.capacity}`);
+            }
+            
+            // 添加元素
+            add(element) {
+                // 检查是否需要扩容
+                if (this.size >= this.capacity) {
+                    this.log(`元素数量(${this.size})已达到容量(${this.capacity})，需要扩容`);
+                    return { added: false, needGrow: true };
+                }
+                
+                this.elements[this.size] = element;
+                this.size++;
+                this.log(`添加元素: ${element}，索引: ${this.size - 1}`);
+                return { added: true, needGrow: false, index: this.size - 1 };
+            }
+            
+            // 执行扩容
+            grow() {
+                const oldCapacity = this.capacity;
+                // 新容量为旧容量的1.5倍
+                const newCapacity = oldCapacity + (oldCapacity >> 1);
+                const newElements = new Array(newCapacity);
+                
+                // 复制元素
+                for (let i = 0; i < this.size; i++) {
+                    newElements[i] = this.elements[i];
+                }
+                
+                this.elements = newElements;
+                this.capacity = newCapacity;
+                this.log(`扩容完成，旧容量: ${oldCapacity}，新容量: ${newCapacity}`);
+                return { oldCapacity, newCapacity };
+            }
+            
+            // 获取元素
+            get(index) {
+                if (index < 0 || index >= this.size) {
+                    this.log(`获取元素失败: 索引${index}越界，当前元素数量: ${this.size}`);
+                    return null;
+                }
+                
+                const element = this.elements[index];
+                this.log(`获取索引${index}的元素: ${element}`);
+                return element;
+            }
+            
+            // 删除元素 - 返回需要移动的步骤
+            prepareRemove(index) {
+                if (index < 0 || index >= this.size) {
+                    this.log(`删除元素失败: 索引${index}越界，当前元素数量: ${this.size}`);
+                    return { success: false, steps: [] };
+                }
+                
+                const removedElement = this.elements[index];
+                this.log(`准备删除索引${index}的元素: ${removedElement}`);
+                
+                // 计算需要移动的元素步骤
+                const steps = [];
+                for (let i = index; i < this.size - 1; i++) {
+                    steps.push({
+                        from: i + 1,
+                        to: i,
+                        value: this.elements[i + 1]
+                    });
+                }
+                
+                return {
+                    success: true,
+                    steps: steps,
+                    removedElement: removedElement,
+                    index: index
+                };
+            }
+            
+            // 完成删除操作（在动画演示完成后调用）
+            completeRemove() {
+                this.size--;
+                this.elements[this.size] = undefined; // 清空最后一个位置
+            }
+            
+            // 清空
+            clear() {
+                this.capacity = 10;
+                this.size = 0;
+                this.elements = new Array(this.capacity);
+                this.logs = [];
+                this.log(`清空ArrayList，重置容量为: ${this.capacity}`);
+            }
+            
+            // 记录日志
+            log(message) {
+                const timestamp = new Date().toLocaleTimeString();
+                this.logs.push(`[${timestamp}] ${message}`);
+                // 保持日志长度不超过20条
+                if (this.logs.length > 20) {
+                    this.logs.shift();
+                }
+            }
+        }
+
+        // 可视化控制器
+        class Visualizer {
+            constructor() {
+                // 初始化ArrayList模拟器
+                this.arrayList = new ArrayListSimulator();
+                this.isAutoDemoRunning = false;
+                this.autoDemoStep = 0;
+                this.isProcessing = false; // 用于防止同时进行多个操作
+                
+                // 获取DOM元素
+                this.arrayContainer = document.getElementById('array-container');
+                this.logContainer = document.getElementById('log-container');
+                this.capacityElement = document.getElementById('capacity');
+                this.sizeElement = document.getElementById('size');
+                this.growthIndicator = document.getElementById('growth-indicator');
+                this.statusMessage = document.getElementById('status-message');
+                this.statusText = document.getElementById('status-text');
+                
+                // 按钮元素
+                this.addBtn = document.getElementById('add-btn');
+                this.getBtn = document.getElementById('get-btn');
+                this.removeBtn = document.getElementById('remove-btn');
+                this.clearBtn = document.getElementById('clear-btn');
+                this.autoDemoBtn = document.getElementById('auto-demo-btn');
+                
+                // 输入框元素
+                this.addValueInput = document.getElementById('add-value');
+                this.getIndexInput = document.getElementById('get-index');
+                this.removeIndexInput = document.getElementById('remove-index');
+                
+                // 绑定事件监听
+                this.bindEvents();
+                
+                // 初始化视图
+                this.updateView();
+            }
+            
+            // 绑定事件
+            bindEvents() {
+                this.addBtn.addEventListener('click', () => this.handleAdd());
+                this.getBtn.addEventListener('click', () => this.handleGet());
+                this.removeBtn.addEventListener('click', () => this.handleRemove());
+                this.clearBtn.addEventListener('click', () => this.handleClear());
+                this.autoDemoBtn.addEventListener('click', () => this.toggleAutoDemo());
+                
+                // 支持按Enter键触发操作
+                this.addValueInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') this.handleAdd();
+                });
+                this.getIndexInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') this.handleGet();
+                });
+                this.removeIndexInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') this.handleRemove();
+                });
+            }
+            
+            // 显示状态消息
+            showStatus(message) {
+                this.statusText.textContent = message;
+                this.statusMessage.classList.remove('hidden');
+                
+                // 5秒后自动隐藏
+                setTimeout(() => {
+                    this.statusMessage.classList.add('hidden');
+                }, 5000);
+            }
+            
+            // 处理添加元素
+            handleAdd() {
+                if (this.isProcessing) return;
+                this.isProcessing = true;
+                
+                const value = this.addValueInput.value.trim();
+                if (value === '') {
+                    alert('请输入要添加的元素值');
+                    this.isProcessing = false;
+                    return;
+                }
+                
+                const num = parseInt(value, 10);
+                if (isNaN(num)) {
+                    alert('请输入有效的数字');
+                    this.isProcessing = false;
+                    return;
+                }
+                
+                const result = this.arrayList.add(num);
+                if (result.needGrow) {
+                    // 需要扩容，先展示扩容过程
+                    this.showStatus(`元素数量已达当前容量(${this.arrayList.capacity})，准备扩容...`);
+                    this.growthIndicator.classList.remove('hidden');
+                    
+                    // 延迟展示扩容动画
+                    setTimeout(() => {
+                        const growthResult = this.arrayList.grow();
+                        this.growthIndicator.classList.add('hidden');
+                        
+                        // 高亮显示新增的容量位置
+                        this.updateArrayVisualization();
+                        const cells = this.arrayContainer.querySelectorAll('.array-cell');
+                        for (let i = growthResult.oldCapacity; i < growthResult.newCapacity; i++) {
+                            if (cells[i]) {
+                                cells[i].classList.add('array-cell-new');
+                            }
+                        }
+                        
+                        // 扩容完成后添加元素
+                        setTimeout(() => {
+                            const finalResult = this.arrayList.add(num);
+                            this.addValueInput.value = '';
+                            this.highlightIndex(finalResult.index, 'add');
+                            
+                            setTimeout(() => {
+                                this.updateView();
+                                this.isProcessing = false;
+                            }, 800);
+                        }, 1500);
+                    }, 1000);
+                } else {
+                    this.showStatus(`正在添加元素: ${num}`);
+                    this.addValueInput.value = '';
+                    
+                    // 高亮显示新添加的元素
+                    this.highlightIndex(result.index, 'add');
+                    
+                    setTimeout(() => {
+                        this.updateView();
+                        this.isProcessing = false;
+                    }, 800);
+                }
+            }
+            
+            // 处理获取元素
+            handleGet() {
+                if (this.isProcessing) return;
+                this.isProcessing = true;
+                
+                const indexStr = this.getIndexInput.value.trim();
+                if (indexStr === '') {
+                    alert('请输入要获取的索引');
+                    this.isProcessing = false;
+                    return;
+                }
+                
+                const index = parseInt(indexStr, 10);
+                if (isNaN(index)) {
+                    alert('请输入有效的索引');
+                    this.isProcessing = false;
+                    return;
+                }
+                
+                const value = this.arrayList.get(index);
+                this.showStatus(value !== null ? `获取到索引${index}的元素: ${value}` : `无法获取索引${index}的元素`);
+                this.highlightIndex(index, 'get');
+                this.getIndexInput.value = '';
+                
+                setTimeout(() => {
+                    this.updateView();
+                    this.isProcessing = false;
+                }, 1000);
+            }
+            
+            // 处理删除元素（带动画展示移动过程）
+            handleRemove() {
+                if (this.isProcessing) return;
+                this.isProcessing = true;
+                
+                const indexStr = this.removeIndexInput.value.trim();
+                if (indexStr === '') {
+                    alert('请输入要删除的索引');
+                    this.isProcessing = false;
+                    return;
+                }
+                
+                const index = parseInt(indexStr, 10);
+                if (isNaN(index)) {
+                    alert('请输入有效的索引');
+                    this.isProcessing = false;
+                    return;
+                }
+                
+                // 准备删除，获取需要移动的步骤
+                const removeData = this.arrayList.prepareRemove(index);
+                if (!removeData.success) {
+                    this.updateView();
+                    this.removeIndexInput.value = '';
+                    this.isProcessing = false;
+                    return;
+                }
+                
+                this.showStatus(`正在删除索引${index}的元素，后续元素将向左移动`);
+                this.removeIndexInput.value = '';
+                
+                // 先高亮显示要删除的元素
+                this.highlightIndex(index, 'remove');
+                
+                // 等待高亮动画完成后，开始移动元素
+                setTimeout(() => {
+                    this.animateElementMovement(removeData.index, removeData.steps, 0, () => {
+                        // 所有移动动画完成后，完成删除操作
+                        this.arrayList.completeRemove();
+                        this.updateView();
+                        this.isProcessing = false;
+                    });
+                }, 800);
+            }
+            
+            // 动画展示元素移动过程
+            animateElementMovement(removeIndex, steps, stepIndex, callback) {
+                if (stepIndex >= steps.length) {
+                    // 所有步骤完成
+                    callback();
+                    return;
+                }
+                
+                // 获取当前步骤
+                const step = steps[stepIndex];
+                
+                // 更新日志，显示移动过程
+                this.arrayList.log(`移动元素: 从索引${step.from}向左到${step.to}`);
+                this.updateLogs();
+                
+                // 更新视图但保持高亮状态
+                this.updateArrayVisualization(false);
+                
+                // 获取相关单元格
+                const cells = this.arrayContainer.querySelectorAll('.array-cell');
+                const fromCell = cells[step.from];
+                const toCell = cells[step.to];
+                
+                // 标记要移动的元素和目标位置
+                fromCell.classList.add('array-cell-moving');
+                toCell.classList.add('array-cell-next');
+                
+                // 添加移动指示器 - 使用左箭头
+                const indicator = document.createElement('div');
+                indicator.className = 'move-indicator';
+                indicator.innerHTML = '←';
+                fromCell.appendChild(indicator);
+                
+                // 执行移动动画
+                setTimeout(() => {
+                    // 移除指示器
+                    if (indicator.parentNode) {
+                        indicator.parentNode.removeChild(indicator);
+                    }
+                    
+                    // 更新数据
+                    this.arrayList.elements[step.to] = step.value;
+                    
+                    // 移除高亮标记
+                    fromCell.classList.remove('array-cell-moving');
+                    toCell.classList.remove('array-cell-next');
+                    
+                    // 进行下一步
+                    setTimeout(() => {
+                        this.animateElementMovement(removeIndex, steps, stepIndex + 1, callback);
+                    }, 300);
+                }, 800);
+            }
+            
+            // 处理清空
+            handleClear() {
+                if (this.isProcessing) return;
+                
+                this.arrayList.clear();
+                this.showStatus('已清空ArrayList');
+                this.updateView();
+            }
+            
+            // 切换自动演示
+            toggleAutoDemo() {
+                if (this.isAutoDemoRunning) {
+                    this.isAutoDemoRunning = false;
+                    this.autoDemoBtn.innerHTML = '<i class="fa fa-play mr-1"></i> 自动演示';
+                    this.showStatus('自动演示已暂停');
+                } else {
+                    this.isProcessing = false;
+                    this.isAutoDemoRunning = true;
+                    this.autoDemoBtn.innerHTML = '<i class="fa fa-pause mr-1"></i> 暂停演示';
+                    this.autoDemoStep = 0;
+                    this.showStatus('自动演示已开始，将展示添加、删除和扩容过程');
+                    this.runAutoDemo();
+                }
+            }
+            
+            // 运行自动演示 - 完成后停止
+            runAutoDemo() {
+                if (!this.isAutoDemoRunning) return;
+                
+                // 演示步骤 - 包含扩容场景
+                const demoSteps = [
+                    () => { this.showStatus("步骤1/16: 添加元素10"); this.addValueInput.value = '10'; this.handleAdd(); },
+                    () => { this.showStatus("步骤2/16: 添加元素20"); this.addValueInput.value = '20'; this.handleAdd(); },
+                    () => { this.showStatus("步骤3/16: 添加元素30"); this.addValueInput.value = '30'; this.handleAdd(); },
+                    () => { this.showStatus("步骤4/16: 添加元素40"); this.addValueInput.value = '40'; this.handleAdd(); },
+                    () => { this.showStatus("步骤5/16: 添加元素50"); this.addValueInput.value = '50'; this.handleAdd(); },
+                    () => { this.showStatus("步骤6/16: 添加元素60"); this.addValueInput.value = '60'; this.handleAdd(); },
+                    () => { this.showStatus("步骤7/16: 添加元素70"); this.addValueInput.value = '70'; this.handleAdd(); },
+                    () => { this.showStatus("步骤8/16: 添加元素80"); this.addValueInput.value = '80'; this.handleAdd(); },
+                    () => { this.showStatus("步骤9/16: 添加元素90"); this.addValueInput.value = '90'; this.handleAdd(); },
+                    () => { this.showStatus("步骤10/16: 添加元素100"); this.addValueInput.value = '100'; this.handleAdd(); },
+                    () => { this.showStatus("步骤11/16: 添加第11个元素会触发扩容"); this.addValueInput.value = '110'; this.handleAdd(); },
+                    () => { this.showStatus("步骤12/16: 删除索引2的元素"); this.removeIndexInput.value = '2'; this.handleRemove(); },
+                    () => { this.showStatus("步骤13/16: 获取索引5的元素"); this.getIndexInput.value = '5'; this.handleGet(); },
+                    () => { this.showStatus("步骤14/16: 添加元素120"); this.addValueInput.value = '120'; this.handleAdd(); },
+                    () => { this.showStatus("步骤15/16: 添加元素130"); this.addValueInput.value = '130'; this.handleAdd(); },
+                    // () => { this.showStatus("步骤16/16: 清空列表"); this.handleClear(); }
+                ];
+                
+                if (this.autoDemoStep < demoSteps.length) {
+                    // 等待当前操作完成
+                    if (!this.isProcessing) {
+                        demoSteps[this.autoDemoStep]();
+                        this.autoDemoStep++;
+                    }
+                    setTimeout(() => this.runAutoDemo(), 500);
+                } else {
+                    // 演示完成，停止演示
+                    this.isAutoDemoRunning = false;
+                    this.autoDemoBtn.innerHTML = '<i class="fa fa-play mr-1"></i> 自动演示';
+                    this.showStatus('自动演示已完成，点击"自动演示"可重新开始');
+                    this.autoDemoStep = 0;
+                }
+            }
+            
+            // 高亮显示索引
+            highlightIndex(index, type) {
+                const cells = this.arrayContainer.querySelectorAll('.array-cell');
+                if (index >= 0 && index < cells.length) {
+                    const cell = cells[index];
+                    cell.classList.add('array-cell-highlighted');
+                    
+                    if (type === 'remove') {
+                        setTimeout(() => {
+                            cell.classList.remove('array-cell-highlighted');
+                            cell.classList.add('array-cell-deleted');
+                        }, 400);
+                    }
+                    
+                    if (type !== 'remove') {
+                        setTimeout(() => {
+                            cell.classList.remove('array-cell-highlighted');
+                        }, 1000);
+                    }
+                }
+            }
+            
+            // 更新视图
+            updateView() {
+                // 更新数组可视化
+                this.updateArrayVisualization();
+                
+                // 更新容量和大小显示
+                this.capacityElement.textContent = this.arrayList.capacity;
+                this.sizeElement.textContent = this.arrayList.size;
+                
+                // 更新日志
+                this.updateLogs();
+            }
+            
+            // 更新数组可视化
+            updateArrayVisualization(clearHighlights = true) {
+                this.arrayContainer.innerHTML = '';
+                
+                for (let i = 0; i < this.arrayList.capacity; i++) {
+                    const cell = document.createElement('div');
+                    let cellClass = `array-cell ${i < this.arrayList.size ? 'array-cell-occupied' : 'array-cell-empty'}`;
+                    
+                    // 如果不需要清除高亮，则保留特定状态
+                    if (!clearHighlights) {
+                        // 检查是否是删除索引或移动中的元素
+                        // 这部分逻辑在动画过程中由animateElementMovement方法处理
+                    }
+                    
+                    cell.className = cellClass;
+                    cell.innerHTML = `
+                        <div>${i < this.arrayList.size ? this.arrayList.elements[i] : ''}</div>
+                        <div class="text-xs mt-1 text-gray-400">${i}</div>
+                    `;
+                    this.arrayContainer.appendChild(cell);
+                }
+            }
+            
+            // 更新日志
+            updateLogs() {
+                this.logContainer.innerHTML = '';
+                
+                this.arrayList.logs.forEach(log => {
+                    const logElement = document.createElement('div');
+                    logElement.className = 'mb-1 pb-1 border-b border-gray-100 last:border-0 last:mb-0 last:pb-0';
+                    logElement.textContent = log;
+                    this.logContainer.appendChild(logElement);
+                });
+                
+                // 滚动到最新日志
+                this.logContainer.scrollTop = this.logContainer.scrollHeight;
+            }
+        }
+
+        // 页面加载完成后初始化可视化
+        document.addEventListener('DOMContentLoaded', () => {
+            const visualizer = new Visualizer();
+        });
+    </script>
+</body>
+</html>
