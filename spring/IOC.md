@@ -267,7 +267,7 @@ public class UserFactory implements FactoryBean<User> {
 	        ApplicationContext applicationContext = new GenericXmlApplicationContext("bean.xml");
 	        BeanDefaultScope beanDefaultScope1 = applicationContext.getBean("beanDefaultScope",BeanDefaultScope.class);
 	        BeanDefaultScope beanDefaultScope2 = applicationContext.getBean("beanDefaultScope",BeanDefaultScope.class);
-	
+		
 	        System.out.println("beanDefaultScope1:"+beanDefaultScope1);
 	        System.out.println("beanDefaultScope2:"+beanDefaultScope2);
 	        System.out.println("地址是否相等:"+(beanDefaultScope1==beanDefaultScope2));
@@ -297,7 +297,7 @@ public class UserFactory implements FactoryBean<User> {
 	        ApplicationContext applicationContext = new GenericXmlApplicationContext("bean.xml");
 	        BeanScopePrototype beanScopePrototype1 = applicationContext.getBean("beanScopePrototype",BeanScopePrototype.class);
 	        BeanScopePrototype beanScopePrototype2 = applicationContext.getBean("beanScopePrototype",BeanScopePrototype.class);
-	
+		
 	        System.out.println("beanScopePrototype1:"+beanScopePrototype1);
 	        System.out.println("beanScopePrototype2:"+beanScopePrototype2);
 	        System.out.println("地址是否相等:"+(beanScopePrototype1==beanScopePrototype2));
@@ -460,20 +460,20 @@ void test() {
 
 代码示例1：
 
-	```
-	//可以设置bean的名称为userServer2
-	@Service("userServer2")
-	public class UserServer {
-	}
-	```
+```java
+//可以设置bean的名称为userServer2
+@Service("userServer2")
+public class UserServer {
+}
+```
 代码示例2：
 
-	```
-	//如果不设置bean的名称，那么取类名将首字母小写作为Bean的名称，也就是userDao
-	@Repository
-	public class UserDao {
-	}
-	```
+```java
+//如果不设置bean的名称，那么取类名将首字母小写作为Bean的名称，也就是userDao
+@Repository
+public class UserDao {
+}
+```
 
 ### 注解代替xml
 使用@Configuration标记类使其成为配置类，这种方式是在代替xml配置文件
@@ -488,18 +488,19 @@ public class ProjectConfig {
 ### 创建Bean的注解生效
 使用@ComponentScan注解进行配置使注解生效，**具体那些包下注解生效**需要用到 属性 basePackages,他接收一个String数组，也就是说他可以设置多个包,代码示例：
 
-	```
-	@Configuration
-	@ComponentScan(basePackages = {"top.ersut.spring.ioc.dao","top.ersut.spring.ioc.server"})
-	public class ProjectConfig {
-	}
-	```
+
+```java
+@Configuration
+@ComponentScan(basePackages = {"top.ersut.spring.ioc.dao","top.ersut.spring.ioc.server"})
+public class ProjectConfig {
+}
+```
 
 ### 自动注入bean的注解
 1. @Autowired：根据属性的类型自动注入
 	1. 可使用在属性上或者方法上
 	2. 示例：根据类型注入
-	```
+	```java
     /**可以放在属性上*/
     @Autowired
     private UserDao userDao;
@@ -513,7 +514,7 @@ public class ProjectConfig {
 
 	3. @Qualifier:这俩个配合使用可以根据Bean的名称进行自动注入
 		1. 示例：根据Bean的名称注入
-		```
+		```java
 	    @Autowired
 	    @Qualifier("userDao")
 	    private UserDao userDao3;
@@ -521,19 +522,19 @@ public class ProjectConfig {
 
 2. @Resource:可以根据类型注入，也可以根据Bean的名称注入
 	1. 示例1：根据类型注入
-	```
+	```java
     @Resource
     private UserDao userDao4;
 	```
 	2. 示例2：根据Bean的名称注入
-	```
+	```java
     @Resource(name = "userDao")
     private UserDao userDao5;
 	```
 
 3. @Value：普通属性注入值
 	1. 示例：添加在属性上（也可以添加在set方法上此处不再做演示）
-	```
+	```java
     @Value("wang")
     private String name;
 	```
@@ -607,7 +608,7 @@ public class BeanScopePrototype {
 1. 初始化方法
 	1. 在方法上添加@PostConstruct注解那么这个方法将变成初始化方法
 	2. 代码示例：
-	```
+	```java
 	@PostConstruct
     public void init(){
         System.out.println("4. 调用自定义初始化方法");
@@ -616,7 +617,7 @@ public class BeanScopePrototype {
 2. 摧毁方法
 	1. 在方法上添加@PreDestroy注解那么这个方法将变成摧毁方法
 	2. 代码示例：
-	```
+	```java
     @PreDestroy
     public void destroy(){
         System.out.println("7. 上下文销毁时，调用自定义销毁方法");
@@ -624,14 +625,15 @@ public class BeanScopePrototype {
 	```
 3. [示例项目(Bean的生命周期注解版)](./spring-framework-demo/IOC-Bean-life-cycle-annotation),部分代码：
 	1. 配置类
-	```
+	```java
 	@Configuration
 	@ComponentScan(basePackages = "top.ersut.spring")
 	public class ProjectConf {
 	}
 	```
 	2. MyBeanPostProcessor
-	```
+	   1. BeanPostProcessor接口对于每个bean都生效
+	```java
 	@Component
 	public class MyBeanPostProcessor implements BeanPostProcessor {
 	
@@ -650,14 +652,14 @@ public class BeanScopePrototype {
 	```
 	3. 测试用例
 	```
-	@Test
+   @Test
     void test() {
         AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(ProjectConf.class);
-        BeanLifeCycle beanLifeCycle = context.getBean(BeanLifeCycle.class);
-
+	     BeanLifeCycle beanLifeCycle = context.getBean(BeanLifeCycle.class);
+   
         //销毁\关闭上下文
         context.close();
-    }
+	 }
 	```
 	4. 输出内容
 	```
