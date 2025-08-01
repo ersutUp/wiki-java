@@ -1136,8 +1136,8 @@ int index = hash(key) & (table.length - 1);</pre>
       }
     }
     
-    // 显示哈希桶，带动画
-    function displayBuckets(animate = true) {
+ // 显示哈希桶，带动画
+function displayBuckets(animate = true) {
       clearAllTimers();
       const key = keyInput.value.trim() || 'defaultKey';
       document.getElementById('resultKey').textContent = key;
@@ -1171,11 +1171,14 @@ int index = hash(key) & (table.length - 1);</pre>
         const bucket = document.createElement('div');
         bucket.className = 'w-16 h-16 rounded border flex flex-col items-center justify-center font-medium opacity-0 transform translate-y-4';
         
+        // 先定义keyEl变量，默认为null
+        let keyEl = null;
+        
         if (i === index) {
           bucket.classList.add('border-primary', 'bg-primary/5');
           
-          // 添加键
-          const keyEl = document.createElement('div');
+          // 只在目标桶时创建keyEl元素
+          keyEl = document.createElement('div');
           keyEl.className = 'text-xs mt-1 text-primary opacity-0';
           keyEl.textContent = key;
           bucket.appendChild(keyEl);
@@ -1188,7 +1191,8 @@ int index = hash(key) & (table.length - 1);</pre>
         bucket.appendChild(indexEl);
         
         container.appendChild(bucket);
-        buckets.push({ element: bucket, isTarget: i === index, keyEl: i === index ? keyEl : null });
+        // 现在keyEl始终有定义（要么是元素，要么是null）
+        buckets.push({ element: bucket, isTarget: i === index, keyEl: keyEl });
       }
       
       // 添加省略号（如果需要）
@@ -1364,9 +1368,9 @@ int index = hash(key) & (table.length - 1);</pre>
       clearAllTimers();
       
       // 移除所有动画类，停止CSS动画
-      document.querySelectorAll('.animation-pulse, .bucket-highlight, .operation-highlight, .bit-box-calculating').forEach(el => {
-        el.classList.remove('animation-pulse', 'bucket-highlight', 'operation-highlight', 'bit-box-calculating');
-      });
+      //document.querySelectorAll('.animation-pulse, .bucket-highlight, .operation-highlight, .bit-box-calculating').forEach(el => {
+      //  el.classList.remove('animation-pulse', 'bucket-highlight', 'operation-highlight', 'bit-box-calculating');
+      //});
       
       // 切换按钮状态
       pauseBtn.classList.add('hidden');
@@ -1405,7 +1409,7 @@ int index = hash(key) & (table.length - 1);</pre>
       calculateAndDisplayAll();
       goToStep(1, false);
       
-      if (callback) callback();
+      if (typeof callback == 'function') callback();
     }
     
     // 辅助函数：补全32位二进制数
