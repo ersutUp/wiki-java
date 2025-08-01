@@ -8,7 +8,7 @@
 - [（未查找原因）catch中抛出异常的同时finally中执行return,为什么抛出的这个异常无法捕获?](./base/catch-throw-finally-return.md)
 - Lambda表达式与函数式编程
 - [java14新特性](./java/Java14新特性.md)
-- [集合](./java/基础.md#set)
+- [集合](./java/集合.md#set)
 
 # spring5
 - [新特性](./spring/spring5-new-characteristic.md)

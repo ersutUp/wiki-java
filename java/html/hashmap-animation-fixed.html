@@ -1,0 +1,1421 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HashMap 索引定位动画演示</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind 配置 -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#165DFF',
+            secondary: '#FF7D00',
+            success: '#00B42A',
+            danger: '#F53F3F',
+            dark: '#1D2129',
+            light: '#F2F3F5',
+            'hash-blue': '#4080FF',
+            'bit-highlight': '#722ED1',
+            'result-highlight': '#0FC6C2',
+            'calculating': '#FF9A2E'
+          },
+          fontFamily: {
+            inter: ['Inter', 'sans-serif'],
+          },
+        },
+      }
+    }
+  </script>
+  
+  <style type="text/tailwindcss">
+    @layer utilities {
+      .content-auto {
+        content-visibility: auto;
+      }
+      .bit-box {
+        width: 24px;
+        height: 24px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid #ccc;
+        margin: 0 1px;
+        font-family: monospace;
+        font-size: 12px;
+        transition: all 0.3s ease;
+      }
+      .bit-box-highlight {
+        background-color: rgba(114, 46, 209, 0.2);
+        border-color: #722ED1;
+        color: #722ED1;
+        font-weight: bold;
+      }
+      .bit-box-result {
+        background-color: rgba(15, 198, 194, 0.2);
+        border-color: #0FC6C2;
+        color: #0FC6C2;
+        font-weight: bold;
+      }
+      .bit-box-calculating {
+        background-color: rgba(255, 154, 46, 0.2);
+        border-color: #FF9A2E;
+        animation: pulse 0.6s infinite;
+      }
+      .animation-pulse {
+        animation: pulse 1.5s infinite;
+      }
+      @keyframes pulse {
+        0%, 100% { opacity: 0.7; }
+        50% { opacity: 1; transform: scale(1.05); }
+      }
+      .step-active {
+        border-color: #165DFF;
+        background-color: rgba(22, 93, 255, 0.1);
+      }
+      .arrow-animation {
+        animation: arrowMove 1s ease-in-out infinite;
+      }
+      @keyframes arrowMove {
+        0%, 100% { transform: translateX(0); }
+        50% { transform: translateX(5px); }
+      }
+      .bucket-highlight {
+        animation: bucketHighlight 1.5s infinite;
+      }
+      @keyframes bucketHighlight {
+        0%, 100% { box-shadow: 0 0 0 2px rgba(22, 93, 255, 0.5); }
+        50% { box-shadow: 0 0 0 4px rgba(22, 93, 255, 0.3); }
+      }
+      .fade-in {
+        animation: fadeIn 0.5s ease-in-out forwards;
+      }
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      .value-change {
+        animation: valueChange 0.8s ease-out;
+      }
+      @keyframes valueChange {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.2); color: #165DFF; }
+        100% { transform: scale(1); }
+      }
+      .operation-highlight {
+        animation: operationHighlight 1s ease-in-out infinite;
+      }
+      @keyframes operationHighlight {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.1); color: #165DFF; }
+      }
+    }
+  </style>
+</head>
+
+<body class="font-inter bg-gray-50 text-dark">
+  <!-- 顶部导航 -->
+  <header class="bg-white shadow-md sticky top-0 z-50">
+    <div class="container mx-auto px-4 py-4">
+      <div class="flex items-center space-x-2">
+        <i class="fa fa-code-fork text-primary text-2xl"></i>
+        <h1 class="text-xl md:text-2xl font-bold text-primary">HashMap 索引定位动画</h1>
+      </div>
+    </div>
+  </header>
+
+  <!-- 主内容区 -->
+  <main class="container mx-auto px-4 py-8">
+    <!-- 介绍部分 -->
+    <section class="mb-8 text-center max-w-3xl mx-auto">
+      <h2 class="text-xl md:text-2xl font-bold mb-4">HashMap 索引定位过程可视化</h2>
+      <p class="text-gray-600 mb-6">直观展示 HashMap 中从键到索引的完整计算过程：hashCode() → 高位运算 → 异或操作 → 索引计算</p>
+      
+      <div class="flex flex-col sm:flex-row gap-4 justify-center mb-6">
+        <div class="flex-1 max-w-xs">
+          <input type="text" id="keyInput" placeholder="输入键（例如：name）" value="name" 
+                 class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50">
+        </div>
+        <div class="flex gap-2">
+          <button id="startAnimation" class="bg-primary hover:bg-primary/90 text-white px-6 py-3 rounded-lg shadow-md transition-all flex items-center">
+            <i class="fa fa-play mr-2"></i> 开始动画
+          </button>
+          <button id="pauseAnimation" class="bg-secondary hover:bg-secondary/90 text-white px-4 py-3 rounded-lg shadow-md transition-all flex items-center hidden">
+            <i class="fa fa-pause"></i>
+          </button>
+          <button id="resetAnimation" class="bg-gray-200 hover:bg-gray-300 text-dark px-4 py-3 rounded-lg shadow-md transition-all flex items-center">
+            <i class="fa fa-refresh"></i>
+          </button>
+        </div>
+      </div>
+      
+      <div class="flex flex-wrap items-center justify-center gap-4 text-sm text-gray-500">
+        <div class="flex items-center gap-2">
+          <span>容量大小:</span>
+          <select id="capacitySelect" class="border border-gray-300 rounded px-2 py-1">
+            <option value="16">16 (2⁴)</option>
+            <option value="32">32 (2⁵)</option>
+            <option value="64">64 (2⁶)</option>
+            <option value="128">128 (2⁷)</option>
+          </select>
+        </div>
+        
+        <div class="flex items-center gap-2">
+          <span>动画速度:</span>
+          <input type="range" id="animationSpeed" min="500" max="3000" step="100" value="1500" 
+                 class="w-32 accent-primary">
+          <span id="speedValue">1.5s</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 动画演示区 -->
+    <section class="bg-white rounded-xl shadow-lg p-6 mb-10">
+      <!-- 步骤指示器 -->
+      <div class="flex flex-wrap justify-between mb-8 relative">
+        <div class="absolute top-1/2 left-0 right-0 h-1 bg-gray-200 -translate-y-1/2 z-0"></div>
+        <div class="absolute top-1/2 left-0 h-1 bg-primary -translate-y-1/2 z-10 transition-all duration-1000" id="progressBar" style="width: 0%"></div>
+        
+        <div class="step flex flex-col items-center relative z-20 w-20" data-step="1">
+          <div class="w-10 h-10 rounded-full bg-white border-2 flex items-center justify-center mb-2 step-active">
+            <span>1</span>
+          </div>
+          <span class="text-sm text-center">计算 hashCode</span>
+        </div>
+        
+        <div class="step flex flex-col items-center relative z-20 w-20" data-step="2">
+          <div class="w-10 h-10 rounded-full bg-white border-2 border-gray-300 flex items-center justify-center mb-2">
+            <span>2</span>
+          </div>
+          <span class="text-sm text-center">高位右移</span>
+        </div>
+        
+        <div class="step flex flex-col items-center relative z-20 w-20" data-step="3">
+          <div class="w-10 h-10 rounded-full bg-white border-2 border-gray-300 flex items-center justify-center mb-2">
+            <span>3</span>
+          </div>
+          <span class="text-sm text-center">异或运算</span>
+        </div>
+        
+        <div class="step flex flex-col items-center relative z-20 w-20" data-step="4">
+          <div class="w-10 h-10 rounded-full bg-white border-2 border-gray-300 flex items-center justify-center mb-2">
+            <span>4</span>
+          </div>
+          <span class="text-sm text-center">索引计算</span>
+        </div>
+        
+        <div class="step flex flex-col items-center relative z-20 w-20" data-step="5">
+          <div class="w-10 h-10 rounded-full bg-white border-2 border-gray-300 flex items-center justify-center mb-2">
+            <span>5</span>
+          </div>
+          <span class="text-sm text-center">定位结果</span>
+        </div>
+      </div>
+      
+      <!-- 动画内容区 -->
+      <div class="space-y-10">
+        <!-- 步骤1: 计算hashCode -->
+        <div id="step1" class="step-content">
+          <h3 class="text-lg font-semibold mb-4 flex items-center">
+            <span class="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center mr-2">1</span>
+            计算键的 hashCode()
+          </h3>
+          
+          <div class="bg-light rounded-lg p-6">
+            <div class="mb-4">
+              <p class="mb-2"><code class="bg-white px-2 py-1 rounded">key.hashCode()</code> 方法返回键的哈希码</p>
+              <div class="flex items-center flex-wrap">
+                <span class="mr-2">计算过程: </span>
+                <div id="hashCodeCalculation" class="font-medium"></div>
+                <span class="mx-2">→</span>
+                <span id="step1HashCode" class="font-medium">正在计算...</span>
+              </div>
+            </div>
+            
+            <div class="mt-6">
+              <p class="mb-3">32位二进制表示:</p>
+              <div id="hashCodeBits" class="flex flex-wrap gap-1 justify-center"></div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 步骤2: 高位右移 -->
+        <div id="step2" class="step-content hidden">
+          <h3 class="text-lg font-semibold mb-4 flex items-center">
+            <span class="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center mr-2">2</span>
+            高位右移 16 位 (hashCode <span class="operation-highlight">>>></span> 16)
+          </h3>
+          
+          <div class="bg-light rounded-lg p-6">
+            <p class="mb-4">将 hashCode 的高16位移动到低16位，保留哈希码的高位信息用于后续计算</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <p class="mb-2 font-medium">原始 hashCode:</p>
+                <div id="originalBits" class="flex flex-wrap gap-1 justify-center"></div>
+                <div class="text-center mt-2 text-sm text-gray-500">高16位 ← 低16位</div>
+              </div>
+              
+              <div class="relative">
+                <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-gray-400 hidden md:block">
+                  <i class="fa fa-long-arrow-down arrow-animation text-2xl"></i>
+                </div>
+                <p class="mb-2 font-medium">右移 16 位后:</p>
+                <div id="shiftedBits" class="flex flex-wrap gap-1 justify-center"></div>
+                <div class="text-center mt-2 text-sm text-gray-500">高16位(补0) ← 原高16位</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 步骤3: 异或运算 -->
+        <div id="step3" class="step-content hidden">
+          <h3 class="text-lg font-semibold mb-4 flex items-center">
+            <span class="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center mr-2">3</span>
+            异或运算 (hashCode <span class="operation-highlight">^</span> (hashCode >>> 16))
+          </h3>
+          
+          <div class="bg-light rounded-lg p-6">
+            <p class="mb-4">将原始哈希码与右移后的哈希码进行异或运算，混合高低位信息，减少哈希冲突</p>
+            
+            <div class="space-y-6">
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                <div>
+                  <p class="mb-2 font-medium">原始 hashCode:</p>
+                  <div id="xorOriginalBits" class="flex flex-wrap gap-1 justify-center"></div>
+                </div>
+                
+                <div class="text-center">
+                  <div class="text-xl font-bold text-gray-500 operation-highlight">^</div>
+                </div>
+                
+                <div>
+                  <p class="mb-2 font-medium">右移后的值:</p>
+                  <div id="xorShiftedBits" class="flex flex-wrap gap-1 justify-center"></div>
+                </div>
+              </div>
+              
+              <div class="text-center">
+                <div class="text-xl font-bold text-gray-500">=></div>
+              </div>
+              
+              <div>
+                <p class="mb-2 font-medium">最终哈希值 (hash):</p>
+                <div id="finalHashBits" class="flex flex-wrap gap-1 justify-center"></div>
+                <div class="mt-2 text-center">
+                  <span class="font-medium">十进制值: </span>
+                  <span id="finalHashDecimal" class="text-primary font-medium"></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 步骤4: 索引计算 -->
+        <div id="step4" class="step-content hidden">
+          <h3 class="text-lg font-semibold mb-4 flex items-center">
+            <span class="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center mr-2">4</span>
+            计算索引 (hash <span class="operation-highlight">&</span> (capacity - 1))
+          </h3>
+          
+          <div class="bg-light rounded-lg p-6">
+            <p class="mb-4">通过与运算计算最终索引，等价于 hash % capacity，但效率更高</p>
+            
+            <div class="space-y-6">
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                <div>
+                  <p class="mb-2 font-medium">哈希值 (hash):</p>
+                  <div id="indexHashBits" class="flex flex-wrap gap-1 justify-center"></div>
+                </div>
+                
+                <div class="text-center">
+                  <div class="text-xl font-bold text-gray-500 operation-highlight">&</div>
+                </div>
+                
+                <div>
+                  <p class="mb-2 font-medium">capacity - 1 (当前容量: <span id="currentCapacity">16</span>):</p>
+                  <div id="capacityMinusOneBits" class="flex flex-wrap gap-1 justify-center"></div>
+                </div>
+              </div>
+              
+              <div class="text-center">
+                <div class="text-xl font-bold text-gray-500">=></div>
+              </div>
+              
+              <div>
+                <p class="mb-2 font-medium">索引值:</p>
+                <div id="indexBits" class="flex flex-wrap gap-1 justify-center"></div>
+                <div class="mt-2 text-center">
+                  <span class="font-medium">十进制值: </span>
+                  <span id="indexDecimal" class="text-secondary font-bold text-xl"></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 步骤5: 定位结果 -->
+        <div id="step5" class="step-content hidden">
+          <h3 class="text-lg font-semibold mb-4 flex items-center">
+            <span class="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center mr-2">5</span>
+            定位到哈希桶
+          </h3>
+          
+          <div class="bg-light rounded-lg p-6">
+            <p class="mb-6 text-center">键 <span id="resultKey" class="font-medium text-primary"></span> 最终被定位到索引为 <span id="resultIndex" class="font-medium text-secondary"></span> 的哈希桶中</p>
+            
+            <div id="bucketsContainer" class="flex flex-wrap gap-3 justify-center mt-6">
+              <!-- 哈希桶将通过JS动态生成 -->
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 导航按钮 -->
+      <div class="flex justify-between mt-10">
+        <button id="prevBtn" class="bg-gray-200 hover:bg-gray-300 text-dark px-6 py-2 rounded-lg shadow-md transition-all flex items-center opacity-50 cursor-not-allowed">
+          <i class="fa fa-arrow-left mr-2"></i> 上一步
+        </button>
+        
+        <button id="nextBtn" class="bg-primary hover:bg-primary/90 text-white px-6 py-2 rounded-lg shadow-md transition-all flex items-center">
+          下一步 <i class="fa fa-arrow-right ml-2"></i>
+        </button>
+      </div>
+    </section>
+    
+    <!-- 解释说明部分 -->
+    <section class="grid md:grid-cols-2 gap-6 mb-10">
+      <div class="bg-white rounded-xl shadow-lg p-6">
+        <h3 class="text-lg font-semibold mb-3 flex items-center">
+          <i class="fa fa-info-circle text-primary mr-2"></i> 为什么这样计算索引？
+        </h3>
+        <ul class="space-y-2 text-gray-600 text-sm">
+          <li class="flex items-start">
+            <i class="fa fa-check-circle text-success mt-1 mr-2"></i>
+            <span>通过混合高低位信息，减少哈希冲突的概率</span>
+          </li>
+          <li class="flex items-start">
+            <i class="fa fa-check-circle text-success mt-1 mr-2"></i>
+            <span>使用位运算 (hash & (n-1)) 替代取模运算，效率更高</span>
+          </li>
+          <li class="flex items-start">
+            <i class="fa fa-check-circle text-success mt-1 mr-2"></i>
+            <span>当容量是2的幂时，hash & (n-1) 等价于 hash % n</span>
+          </li>
+          <li class="flex items-start">
+            <i class="fa fa-check-circle text-success mt-1 mr-2"></i>
+            <span>确保计算出的索引在 [0, capacity-1] 范围内</span>
+          </li>
+        </ul>
+      </div>
+      
+      <div class="bg-white rounded-xl shadow-lg p-6">
+        <h3 class="text-lg font-semibold mb-3 flex items-center">
+          <i class="fa fa-code text-primary mr-2"></i> Java 源码对应实现
+        </h3>
+        <div class="bg-light p-4 rounded-lg font-mono text-sm overflow-x-auto">
+          <pre>// 计算哈希值
+static final int hash(Object key) {
+    int h;
+    return (key == null) ? 0 : (h = key.hashCode()) ^ (h >>> 16);
+}
+
+// 计算索引
+int index = hash(key) & (table.length - 1);</pre>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- 页脚 -->
+  <footer class="bg-dark text-white py-6">
+    <div class="container mx-auto px-4 text-center text-gray-400 text-sm">
+      &copy; HashMap 索引定位动画演示 | 展示哈希计算到索引确定的完整过程
+    </div>
+  </footer>
+
+  <script>
+    // 全局变量
+    let currentStep = 1;
+    let totalSteps = 5;
+    let animationSpeed = 1500; // 动画速度，毫秒
+    let stepAnimationSpeed = 50; // 步骤内动画速度，毫秒
+    let hashCode = 0;
+    let shiftedHashCode = 0;
+    let finalHash = 0;
+    let index = 0;
+    let capacity = 16;
+    let isAnimating = false; // 防止动画叠加
+    let isAutoPlaying = false; // 是否自动播放中
+    let animationInterval = null; // 自动播放计时器
+    let currentTimeouts = []; // 当前步骤中的计时器，用于暂停功能
+    let currentIntervals = []; // 当前步骤中的间隔计时器
+    
+    // DOM 元素
+    const keyInput = document.getElementById('keyInput');
+    const startBtn = document.getElementById('startAnimation');
+    const pauseBtn = document.getElementById('pauseAnimation');
+    const resetBtn = document.getElementById('resetAnimation');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const progressBar = document.getElementById('progressBar');
+    const capacitySelect = document.getElementById('capacitySelect');
+    const currentCapacityEl = document.getElementById('currentCapacity');
+    const animationSpeedSlider = document.getElementById('animationSpeed');
+    const speedValueDisplay = document.getElementById('speedValue');
+    
+    // 初始化
+    document.addEventListener('DOMContentLoaded', () => {
+      updateCapacity();
+      updateSpeedDisplay();
+      calculateAndDisplayAll();
+      setupEventListeners();
+    });
+    
+    // 设置事件监听器
+    function setupEventListeners() {
+      // 开始动画按钮
+      startBtn.addEventListener('click', startAnimation);
+      
+      // 暂停动画按钮
+      pauseBtn.addEventListener('click', pauseAnimation);
+      
+      // 重置按钮
+      resetBtn.addEventListener('click', resetAnimation);
+      
+      // 上一步/下一步按钮
+      prevBtn.addEventListener('click', () => {
+        if (!isAnimating) goToPrevStep();
+      });
+      nextBtn.addEventListener('click', () => {
+        if (!isAnimating) goToNextStep();
+      });
+      
+      // 容量选择变化
+      capacitySelect.addEventListener('change', () => {
+        if (!isAnimating) {
+          capacity = parseInt(capacitySelect.value);
+          updateCapacity();
+          if (currentStep >= 4) {
+            calculateAndDisplayIndex();
+            if (currentStep >= 5) {
+              displayBuckets();
+            }
+          }
+        }
+      });
+      
+      // 动画速度调节
+      animationSpeedSlider.addEventListener('input', () => {
+        animationSpeed = parseInt(animationSpeedSlider.value);
+        updateSpeedDisplay();
+      });
+      
+      // 键输入变化
+      keyInput.addEventListener('change', () => {
+        if (!isAnimating) resetAnimation();
+      });
+      
+      // 步骤点击
+      document.querySelectorAll('.step').forEach(stepEl => {
+        stepEl.addEventListener('click', () => {
+          if (!isAnimating) {
+            const step = parseInt(stepEl.dataset.step);
+            if (step <= currentStep) {
+              goToStep(step);
+            }
+          }
+        });
+      });
+    }
+    
+    // 更新容量显示
+    function updateCapacity() {
+      currentCapacityEl.textContent = capacity;
+      document.getElementById('capacitySelect').value = capacity;
+    }
+    
+    // 更新速度显示
+    function updateSpeedDisplay() {
+      speedValueDisplay.textContent = (animationSpeed / 1000).toFixed(1) + 's';
+    }
+    
+    // 清除当前所有计时器和间隔器
+    function clearAllTimers() {
+      // 清除超时计时器
+      currentTimeouts.forEach(timeout => clearTimeout(timeout));
+      currentTimeouts = [];
+      
+      // 清除间隔计时器
+      currentIntervals.forEach(interval => clearInterval(interval));
+      currentIntervals = [];
+    }
+    
+    // 添加超时计时器并跟踪
+    function setTimeoutTracked(callback, delay) {
+      const timeout = setTimeout(callback, delay);
+      currentTimeouts.push(timeout);
+      return timeout;
+    }
+    
+    // 添加间隔计时器并跟踪
+    function setIntervalTracked(callback, delay) {
+      const interval = setInterval(callback, delay);
+      currentIntervals.push(interval);
+      return interval;
+    }
+    
+    // 计算所有值
+    function calculateAllValues() {
+      const key = keyInput.value.trim() || 'defaultKey';
+      
+      // 计算 hashCode (模拟Java的String.hashCode()实现)
+      hashCode = 0;
+      for (let i = 0; i < key.length; i++) {
+        hashCode = 31 * hashCode + key.charCodeAt(i);
+      }
+      
+      // 处理负数，转为无符号表示
+      hashCode = hashCode & 0xFFFFFFFF;
+      
+      // 高位右移16位
+      shiftedHashCode = hashCode >>> 16;
+      
+      // 异或运算得到最终哈希值
+      finalHash = hashCode ^ shiftedHashCode;
+      
+      // 计算索引
+      index = finalHash & (capacity - 1);
+    }
+    
+    // 计算并显示所有步骤
+    function calculateAndDisplayAll() {
+      calculateAllValues();
+      displayStep1(false);
+    }
+    
+    // 显示步骤1: hashCode计算，带动画
+    function displayStep1(animate = true) {
+      clearAllTimers();
+      const key = keyInput.value.trim() || 'defaultKey';
+      
+      // 显示hashCode计算过程
+      const calculationEl = document.getElementById('hashCodeCalculation');
+      calculationEl.innerHTML = '';
+      
+      // 显示二进制位容器
+      const bitsContainer = document.getElementById('hashCodeBits');
+      bitsContainer.innerHTML = '';
+      
+      let binaryStr = padWithLeadingZeros(hashCode.toString(2), 32);
+      
+      // 创建所有位元素但不显示
+      for (let i = 0; i < 32; i++) {
+        const bitEl = document.createElement('div');
+        bitEl.className = 'bit-box opacity-0';
+        bitEl.textContent = binaryStr[i];
+        bitsContainer.appendChild(bitEl);
+      }
+      
+      // 计算hashCode的过程动画
+      let currentHash = 0;
+      const hashCodeEl = document.getElementById('step1HashCode');
+      hashCodeEl.textContent = '0';
+      
+      // 显示计算步骤：s[0]*31^(n-1) + s[1]*31^(n-2) + ... + s[n-1]
+      if (animate) {
+        isAnimating = true;
+        let step = 0;
+        
+        // 显示每个字符的计算过程
+        const calculationSteps = [];
+        for (let i = 0; i < key.length; i++) {
+          const char = key.charAt(i);
+          const code = key.charCodeAt(i);
+          calculationSteps.push({
+            char: char,
+            code: code,
+            step: i
+          });
+        }
+        
+        // 执行计算动画
+        const calculationInterval = setIntervalTracked(() => {
+          if (step < calculationSteps.length) {
+            const { char, code, step: i } = calculationSteps[step];
+            const prevHash = currentHash;
+            currentHash = 31 * currentHash + code;
+            
+            // 更新计算过程显示
+            if (step === 0) {
+              calculationEl.innerHTML += `${code} (字符 '${char}')`;
+            } else {
+              calculationEl.innerHTML += ` → 31 × ${prevHash} + ${code} (字符 '${char}')`;
+            }
+            
+            // 更新哈希值显示
+            hashCodeEl.textContent = currentHash;
+            hashCodeEl.classList.add('value-change');
+            setTimeoutTracked(() => {
+              hashCodeEl.classList.remove('value-change');
+            }, 500);
+            
+            step++;
+          } else {
+            clearAllTimers();
+            
+            // 最终处理负数
+            if (currentHash < 0) {
+              calculationEl.innerHTML += ` → 处理负数 → ${hashCode}`;
+              setTimeoutTracked(() => {
+                hashCodeEl.textContent = hashCode;
+                hashCodeEl.classList.add('value-change');
+                setTimeoutTracked(() => {
+                  hashCodeEl.classList.remove('value-change');
+                }, 500);
+              }, 500);
+            }
+            
+            // 二进制位逐个显示的动画
+            setTimeoutTracked(() => {
+              const bitElements = bitsContainer.querySelectorAll('.bit-box');
+              let bitIndex = 0;
+              
+              const bitInterval = setIntervalTracked(() => {
+                if (bitIndex < 32) {
+                  bitElements[bitIndex].classList.remove('opacity-0');
+                  bitElements[bitIndex].classList.add('fade-in');
+                  
+                  // 高亮高16位
+                  if (bitIndex < 16) {
+                    setTimeoutTracked(() => {
+                      bitElements[bitIndex].classList.add('bit-box-highlight');
+                    }, 200);
+                  }
+                  
+                  bitIndex++;
+                  
+                  if (bitIndex === 32) {
+                    clearAllTimers();
+                    isAnimating = false;
+                    
+                    // 如果是自动播放模式，继续下一步
+                    if (isAutoPlaying) {
+                      setTimeoutTracked(() => {
+                        if (currentStep < totalSteps) {
+                          goToStep(currentStep + 1);
+                        } else {
+                          stopAutoPlay();
+                        }
+                      }, animationSpeed / 2);
+                    }
+                  }
+                }
+              }, stepAnimationSpeed);
+            }, 800);
+          }
+        }, 1000);
+      } else {
+        // 不带动画直接显示
+        let calculationHTML = '';
+        for (let i = 0; i < key.length; i++) {
+          const char = key.charAt(i);
+          const code = key.charCodeAt(i);
+          if (i === 0) {
+            calculationHTML += `${code} (字符 '${char}')`;
+          } else {
+            calculationHTML += ` → 31 × 前值 + ${code} (字符 '${char}')`;
+          }
+        }
+        if (hashCode < 0) {
+          calculationHTML += ` → 处理负数 → ${hashCode}`;
+        }
+        calculationEl.innerHTML = calculationHTML;
+        hashCodeEl.textContent = hashCode;
+        
+        // 显示所有位
+        const bitElements = bitsContainer.querySelectorAll('.bit-box');
+        bitElements.forEach((el, i) => {
+          el.classList.remove('opacity-0');
+          if (i < 16) {
+            el.classList.add('bit-box-highlight');
+          }
+        });
+      }
+    }
+    
+    // 显示步骤2: 高位右移，带动画
+    function displayStep2(animate = true) {
+      clearAllTimers();
+      // 原始hashCode的32位二进制
+      const originalContainer = document.getElementById('originalBits');
+      originalContainer.innerHTML = '';
+      
+      let originalBinary = padWithLeadingZeros(hashCode.toString(2), 32);
+      
+      // 创建原始位元素
+      for (let i = 0; i < 32; i++) {
+        const bitEl = document.createElement('div');
+        bitEl.className = 'bit-box';
+        bitEl.textContent = originalBinary[i];
+        originalContainer.appendChild(bitEl);
+      }
+      
+      // 右移16位后的32位二进制
+      const shiftedContainer = document.getElementById('shiftedBits');
+      shiftedContainer.innerHTML = '';
+      
+      let shiftedBinary = padWithLeadingZeros(shiftedHashCode.toString(2), 32);
+      
+      // 创建右移位元素但不显示
+      for (let i = 0; i < 32; i++) {
+        const bitEl = document.createElement('div');
+        bitEl.className = 'bit-box opacity-0';
+        bitEl.textContent = shiftedBinary[i];
+        shiftedContainer.appendChild(bitEl);
+      }
+      
+      if (animate) {
+        isAnimating = true;
+        
+        // 高亮原始hashCode的高16位
+        const originalBits = originalContainer.querySelectorAll('.bit-box');
+        let highlightIndex = 0;
+        
+        const highlightInterval = setIntervalTracked(() => {
+          if (highlightIndex < 16) {
+            originalBits[highlightIndex].classList.add('bit-box-highlight');
+            highlightIndex++;
+          } else {
+            clearAllTimers();
+            
+            // 模拟右移动画
+            setTimeoutTracked(() => {
+              const shiftedBits = shiftedContainer.querySelectorAll('.bit-box');
+              
+              // 先显示高16位的0
+              for (let i = 0; i < 16; i++) {
+                setTimeoutTracked(() => {
+                  shiftedBits[i].classList.remove('opacity-0');
+                  shiftedBits[i].classList.add('fade-in');
+                }, i * stepAnimationSpeed);
+              }
+              
+              // 再显示从原高16位移过来的位
+              for (let i = 0; i < 16; i++) {
+                setTimeoutTracked(() => {
+                  shiftedBits[i + 16].classList.remove('opacity-0');
+                  shiftedBits[i + 16].classList.add('fade-in', 'bit-box-highlight');
+                  // 原始位添加动画效果表示移动
+                  originalBits[i].classList.add('bit-box-calculating');
+                  setTimeoutTracked(() => {
+                    originalBits[i].classList.remove('bit-box-calculating');
+                  }, 500);
+                }, (i + 16) * stepAnimationSpeed);
+              }
+              
+              // 动画完成
+              setTimeoutTracked(() => {
+                clearAllTimers();
+                isAnimating = false;
+                
+                // 如果是自动播放模式，继续下一步
+                if (isAutoPlaying) {
+                  setTimeoutTracked(() => {
+                    if (currentStep < totalSteps) {
+                      goToStep(currentStep + 1);
+                    } else {
+                      stopAutoPlay();
+                    }
+                  }, animationSpeed / 2);
+                }
+              }, 32 * stepAnimationSpeed);
+            }, 500);
+          }
+        }, stepAnimationSpeed);
+      } else {
+        // 不带动画直接显示
+        const originalBits = originalContainer.querySelectorAll('.bit-box');
+        for (let i = 0; i < 16; i++) {
+          originalBits[i].classList.add('bit-box-highlight');
+        }
+        
+        const shiftedBits = shiftedContainer.querySelectorAll('.bit-box');
+        shiftedBits.forEach((el, i) => {
+          el.classList.remove('opacity-0');
+          if (i >= 16) {
+            el.classList.add('bit-box-highlight');
+          }
+        });
+      }
+    }
+    
+    // 显示步骤3: 异或运算，带动画 - 优化版本
+    function displayStep3(animate = true) {
+      clearAllTimers();
+      // 原始hashCode的32位二进制
+      const originalContainer = document.getElementById('xorOriginalBits');
+      originalContainer.innerHTML = '';
+      
+      let originalBinary = padWithLeadingZeros(hashCode.toString(2), 32);
+      
+      for (let i = 0; i < 32; i++) {
+        const bitEl = document.createElement('div');
+        bitEl.className = 'bit-box';
+        bitEl.textContent = originalBinary[i];
+        originalContainer.appendChild(bitEl);
+      }
+      
+      // 右移16位后的32位二进制
+      const shiftedContainer = document.getElementById('xorShiftedBits');
+      shiftedContainer.innerHTML = '';
+      
+      let shiftedBinary = padWithLeadingZeros(shiftedHashCode.toString(2), 32);
+      
+      for (let i = 0; i < 32; i++) {
+        const bitEl = document.createElement('div');
+        bitEl.className = 'bit-box';
+        bitEl.textContent = shiftedBinary[i];
+        shiftedContainer.appendChild(bitEl);
+      }
+      
+      // 最终哈希值的32位二进制
+      const finalContainer = document.getElementById('finalHashBits');
+      finalContainer.innerHTML = '';
+      
+      let finalBinary = padWithLeadingZeros(finalHash.toString(2), 32);
+      document.getElementById('finalHashDecimal').textContent = finalHash;
+      
+      // 创建最终哈希位元素但不显示
+      for (let i = 0; i < 32; i++) {
+        const bitEl = document.createElement('div');
+        bitEl.className = 'bit-box opacity-0';
+        bitEl.textContent = finalBinary[i];
+        finalContainer.appendChild(bitEl);
+      }
+      
+      if (animate) {
+        isAnimating = true;
+        
+        // 获取所有位元素引用
+        const originalBits = originalContainer.querySelectorAll('.bit-box');
+        const shiftedBits = shiftedContainer.querySelectorAll('.bit-box');
+        const finalBits = finalContainer.querySelectorAll('.bit-box');
+        
+        // 先高亮操作符
+        const operationEl = document.querySelector('#step3 .operation-highlight');
+        operationEl.classList.add('animation-pulse');
+        
+        // 优化：使用requestAnimationFrame和递归代替setInterval
+        let bitIndex = 0;
+        
+        function processNextBit() {
+          if (bitIndex < 32 && isAnimating) {
+            // 高亮当前计算的位
+            originalBits[bitIndex].classList.add('bit-box-calculating');
+            shiftedBits[bitIndex].classList.add('bit-box-calculating');
+            
+            // 计算异或结果并显示
+            setTimeout(() => {
+              finalBits[bitIndex].classList.remove('opacity-0');
+              finalBits[bitIndex].classList.add('fade-in');
+              
+              // 如果结果为1（两数不同），添加结果高亮
+              if (originalBinary[bitIndex] !== shiftedBinary[bitIndex]) {
+                finalBits[bitIndex].classList.add('bit-box-result');
+              }
+              
+              // 移除计算高亮
+              originalBits[bitIndex].classList.remove('bit-box-calculating');
+              shiftedBits[bitIndex].classList.remove('bit-box-calculating');
+              
+              bitIndex++;
+              
+              // 安排处理下一位，使用requestAnimationFrame确保平滑动画
+              requestAnimationFrame(() => {
+                setTimeout(processNextBit, 50); // 控制位处理速度
+              });
+              
+              // 检查是否处理完所有位
+              if (bitIndex === 32) {
+                finishXorAnimation(operationEl);
+              }
+            }, 200);
+          }
+        }
+        
+        // 开始处理第一位
+        processNextBit();
+        
+      } else {
+        // 不带动画直接显示
+        const finalBits = finalContainer.querySelectorAll('.bit-box');
+        finalBits.forEach((el, i) => {
+          el.classList.remove('opacity-0');
+          if (originalBinary[i] !== shiftedBinary[i]) {
+            el.classList.add('bit-box-result');
+          }
+        });
+      }
+    }
+    
+    // 异或运算动画完成处理函数
+    function finishXorAnimation(operationEl) {
+      clearAllTimers();
+      operationEl.classList.remove('animation-pulse');
+      
+      // 显示最终十进制值并添加动画
+      setTimeout(() => {
+        const decimalEl = document.getElementById('finalHashDecimal');
+        decimalEl.classList.add('value-change');
+        setTimeout(() => {
+          decimalEl.classList.remove('value-change');
+          isAnimating = false;
+          
+          // 如果是自动播放模式，继续下一步
+          if (isAutoPlaying) {
+            setTimeout(() => {
+              if (currentStep < totalSteps) {
+                goToStep(currentStep + 1);
+              } else {
+                stopAutoPlay();
+              }
+            }, animationSpeed / 2);
+          }
+        }, 500);
+      }, 500);
+    }
+    
+    // 计算并显示索引，带动画
+    function calculateAndDisplayIndex(animate = true) {
+      clearAllTimers();
+      // 重新计算索引（容量可能已变化）
+      index = finalHash & (capacity - 1);
+      
+      // 哈希值的32位二进制
+      const hashContainer = document.getElementById('indexHashBits');
+      hashContainer.innerHTML = '';
+      
+      let hashBinary = padWithLeadingZeros(finalHash.toString(2), 32);
+      
+      // 计算需要显示的位数（基于容量）
+      const bitsNeeded = Math.log2(capacity);
+      const startBit = 32 - bitsNeeded;
+      
+      for (let i = 0; i < 32; i++) {
+        const bitEl = document.createElement('div');
+        bitEl.className = 'bit-box';
+        bitEl.textContent = hashBinary[i];
+        hashContainer.appendChild(bitEl);
+      }
+      
+      // capacity - 1的二进制
+      const capacityContainer = document.getElementById('capacityMinusOneBits');
+      capacityContainer.innerHTML = '';
+      
+      let capacityMinusOne = capacity - 1;
+      let capacityBinary = padWithLeadingZeros(capacityMinusOne.toString(2), 32);
+      
+      for (let i = 0; i < 32; i++) {
+        const bitEl = document.createElement('div');
+        bitEl.className = 'bit-box';
+        bitEl.textContent = capacityBinary[i];
+        capacityContainer.appendChild(bitEl);
+      }
+      
+      // 索引的二进制
+      const indexContainer = document.getElementById('indexBits');
+      indexContainer.innerHTML = '';
+      
+      let indexBinary = padWithLeadingZeros(index.toString(2), bitsNeeded);
+      document.getElementById('indexDecimal').textContent = index;
+      
+      // 补全32位显示
+      for (let i = 0; i < 32; i++) {
+        const bitEl = document.createElement('div');
+        bitEl.className = 'bit-box opacity-0';
+        if (i >= 32 - bitsNeeded) {
+          bitEl.textContent = indexBinary[i - (32 - bitsNeeded)];
+        } else {
+          bitEl.textContent = '0';
+        }
+        indexContainer.appendChild(bitEl);
+      }
+      
+      if (animate) {
+        isAnimating = true;
+        
+        // 高亮参与计算的位
+        const hashBits = hashContainer.querySelectorAll('.bit-box');
+        const capacityBits = capacityContainer.querySelectorAll('.bit-box');
+        const indexBits = indexContainer.querySelectorAll('.bit-box');
+        
+        // 先高亮操作符
+        const operationEl = document.querySelector('#step4 .operation-highlight');
+        operationEl.classList.add('animation-pulse');
+        
+        // 高亮参与计算的位（从startBit到31）
+        let highlightIndex = startBit;
+        const highlightInterval = setIntervalTracked(() => {
+          if (highlightIndex < 32) {
+            hashBits[highlightIndex].classList.add('bit-box-highlight');
+            capacityBits[highlightIndex].classList.add('bit-box-highlight');
+            highlightIndex++;
+            
+            if (highlightIndex === 32) {
+              clearAllTimers();
+              
+              // 执行与运算并显示结果
+              setTimeoutTracked(() => {
+                let resultIndex = 0;
+                const resultInterval = setIntervalTracked(() => {
+                  if (resultIndex < 32) {
+                    indexBits[resultIndex].classList.remove('opacity-0');
+                    indexBits[resultIndex].classList.add('fade-in');
+                    
+                    // 对于有效位，添加结果高亮
+                    if (resultIndex >= 32 - bitsNeeded) {
+                      indexBits[resultIndex].classList.add('bit-box-result');
+                    }
+                    
+                    resultIndex++;
+                    
+                    if (resultIndex === 32) {
+                      clearAllTimers();
+                      operationEl.classList.remove('animation-pulse');
+                      
+                      // 显示最终索引值并添加动画
+                      setTimeoutTracked(() => {
+                        const indexEl = document.getElementById('indexDecimal');
+                        indexEl.classList.add('value-change');
+                        setTimeoutTracked(() => {
+                          indexEl.classList.remove('value-change');
+                          isAnimating = false;
+                          
+                          // 如果是自动播放模式，继续下一步
+                          if (isAutoPlaying) {
+                            setTimeoutTracked(() => {
+                              if (currentStep < totalSteps) {
+                                goToStep(currentStep + 1);
+                              } else {
+                                stopAutoPlay();
+                              }
+                            }, animationSpeed / 2);
+                          }
+                        }, 500);
+                      }, 500);
+                    }
+                  }
+                }, 50);
+              }, 500);
+            }
+          }
+        }, 50);
+      } else {
+        // 不带动画直接显示
+        const hashBits = hashContainer.querySelectorAll('.bit-box');
+        const capacityBits = capacityContainer.querySelectorAll('.bit-box');
+        const indexBits = indexContainer.querySelectorAll('.bit-box');
+        
+        for (let i = startBit; i < 32; i++) {
+          hashBits[i].classList.add('bit-box-highlight');
+          capacityBits[i].classList.add('bit-box-highlight');
+        }
+        
+        indexBits.forEach((el, i) => {
+          el.classList.remove('opacity-0');
+          if (i >= 32 - bitsNeeded) {
+            el.classList.add('bit-box-result');
+          }
+        });
+      }
+    }
+    
+    // 显示哈希桶，带动画
+    function displayBuckets(animate = true) {
+      clearAllTimers();
+      const key = keyInput.value.trim() || 'defaultKey';
+      document.getElementById('resultKey').textContent = key;
+      document.getElementById('resultIndex').textContent = index;
+      
+      const container = document.getElementById('bucketsContainer');
+      container.innerHTML = '';
+      
+      // 只显示部分桶，避免过多
+      const displayCount = Math.min(capacity, 16);
+      let startIndex = Math.max(0, index - 4);
+      let endIndex = Math.min(capacity, startIndex + displayCount);
+      
+      // 如果索引不在显示范围内，调整显示范围
+      if (index < startIndex || index >= endIndex) {
+        startIndex = Math.max(0, index - displayCount / 2);
+        endIndex = startIndex + displayCount;
+      }
+      
+      // 添加省略号（如果需要）
+      if (startIndex > 0) {
+        const ellipsis = document.createElement('div');
+        ellipsis.className = 'w-10 h-16 flex items-center justify-center text-gray-400';
+        ellipsis.textContent = '...';
+        container.appendChild(ellipsis);
+      }
+      
+      // 创建哈希桶但不显示
+      const buckets = [];
+      for (let i = startIndex; i < endIndex; i++) {
+        const bucket = document.createElement('div');
+        bucket.className = 'w-16 h-16 rounded border flex flex-col items-center justify-center font-medium opacity-0 transform translate-y-4';
+        
+        if (i === index) {
+          bucket.classList.add('border-primary', 'bg-primary/5');
+          
+          // 添加键
+          const keyEl = document.createElement('div');
+          keyEl.className = 'text-xs mt-1 text-primary opacity-0';
+          keyEl.textContent = key;
+          bucket.appendChild(keyEl);
+        } else {
+          bucket.classList.add('border-gray-300', 'bg-white');
+        }
+        
+        const indexEl = document.createElement('div');
+        indexEl.textContent = i;
+        bucket.appendChild(indexEl);
+        
+        container.appendChild(bucket);
+        buckets.push({ element: bucket, isTarget: i === index, keyEl: i === index ? keyEl : null });
+      }
+      
+      // 添加省略号（如果需要）
+      if (endIndex < capacity) {
+        const ellipsis = document.createElement('div');
+        ellipsis.className = 'w-10 h-16 flex items-center justify-center text-gray-400';
+        ellipsis.textContent = '...';
+        container.appendChild(ellipsis);
+      }
+      
+      if (animate) {
+        isAnimating = true;
+        
+        // 逐个显示哈希桶
+        buckets.forEach((bucket, i) => {
+          setTimeoutTracked(() => {
+            bucket.element.classList.remove('opacity-0', 'translate-y-4');
+            bucket.element.classList.add('transition-all', 'duration-300', 'ease-out');
+            
+            // 如果是目标桶，最后添加高亮动画
+            if (bucket.isTarget) {
+              setTimeoutTracked(() => {
+                bucket.element.classList.add('bucket-highlight');
+                
+                // 显示键
+                setTimeoutTracked(() => {
+                  if (bucket.keyEl) {
+                    bucket.keyEl.classList.remove('opacity-0');
+                    bucket.keyEl.classList.add('transition-opacity', 'duration-500', 'opacity-100');
+                    
+                    setTimeoutTracked(() => {
+                      clearAllTimers();
+                      isAnimating = false;
+                      
+                      // 如果是自动播放模式，动画完成
+                      if (isAutoPlaying) {
+                        stopAutoPlay();
+                      }
+                    }, 500);
+                  }
+                }, 500);
+              }, 300);
+            } else if (i === buckets.length - 1) {
+              // 如果是最后一个非目标桶，动画完成
+              setTimeoutTracked(() => {
+                clearAllTimers();
+                isAnimating = false;
+                
+                // 如果是自动播放模式，动画完成
+                if (isAutoPlaying) {
+                  stopAutoPlay();
+                }
+              }, 300);
+            }
+          }, i * 100);
+        });
+      } else {
+        // 不带动画直接显示
+        buckets.forEach(bucket => {
+          bucket.element.classList.remove('opacity-0', 'translate-y-4');
+          if (bucket.isTarget) {
+            bucket.element.classList.add('bucket-highlight');
+            if (bucket.keyEl) {
+              bucket.keyEl.classList.remove('opacity-0');
+            }
+          }
+        });
+      }
+    }
+    
+    // 前往指定步骤
+    function goToStep(step, animate = true) {
+      if (step < 1 || step > totalSteps || isAnimating) return;
+      
+      // 隐藏所有步骤
+      document.querySelectorAll('.step-content').forEach(el => {
+        el.classList.add('hidden');
+      });
+      
+      // 显示当前步骤
+      document.getElementById(`step${step}`).classList.remove('hidden');
+      
+      // 更新步骤指示器
+      document.querySelectorAll('.step .w-10').forEach((el, i) => {
+        if (i + 1 < step) {
+          el.classList.remove('border-gray-300', 'step-active');
+          el.classList.add('bg-primary', 'text-white');
+        } else if (i + 1 === step) {
+          el.classList.remove('border-gray-300', 'bg-primary', 'text-white');
+          el.classList.add('step-active');
+        } else {
+          el.classList.remove('step-active', 'bg-primary', 'text-white');
+          el.classList.add('border-gray-300');
+        }
+      });
+      
+      // 更新进度条
+      progressBar.style.width = `${(step - 1) * (100 / (totalSteps - 1))}%`;
+      
+      // 更新按钮状态
+      if (step === 1) {
+        prevBtn.classList.add('opacity-50', 'cursor-not-allowed');
+      } else {
+        prevBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+      }
+      
+      if (step === totalSteps) {
+        nextBtn.classList.add('opacity-50', 'cursor-not-allowed');
+      } else {
+        nextBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+      }
+      
+      // 执行当前步骤的动画或显示
+      switch(step) {
+        case 1:
+          displayStep1(animate);
+          break;
+        case 2:
+          displayStep2(animate);
+          break;
+        case 3:
+          displayStep3(animate);
+          break;
+        case 4:
+          calculateAndDisplayIndex(animate);
+          break;
+        case 5:
+          displayBuckets(animate);
+          break;
+      }
+      
+      currentStep = step;
+    }
+    
+    // 前往上一步
+    function goToPrevStep() {
+      if (currentStep > 1) {
+        goToStep(currentStep - 1);
+      }
+    }
+    
+    // 前往下一步
+    function goToNextStep() {
+      if (currentStep < totalSteps) {
+        goToStep(currentStep + 1);
+      }
+    }
+    
+    // 开始自动动画
+    function startAnimation() {
+      if (isAnimating) return;
+      
+      // 切换按钮状态
+      startBtn.classList.add('hidden');
+      pauseBtn.classList.remove('hidden');
+      
+      isAutoPlaying = true;
+      
+      // 如果在最后一步，先重置
+      if (currentStep === totalSteps) {
+        resetAnimation(() => {
+          goToStep(1, true);
+        });
+      } else if (currentStep === 1 && !isAnimating) {
+        // 从第一步开始
+        goToStep(1, true);
+      }
+    }
+    
+    // 暂停动画
+    function pauseAnimation() {
+      // 清除所有计时器和间隔器
+      clearAllTimers();
+      
+      // 移除所有动画类，停止CSS动画
+      document.querySelectorAll('.animation-pulse, .bucket-highlight, .operation-highlight, .bit-box-calculating').forEach(el => {
+        el.classList.remove('animation-pulse', 'bucket-highlight', 'operation-highlight', 'bit-box-calculating');
+      });
+      
+      // 切换按钮状态
+      pauseBtn.classList.add('hidden');
+      startBtn.classList.remove('hidden');
+      
+      // 更新动画状态
+      isAutoPlaying = false;
+      isAnimating = false;
+    }
+    
+    // 停止自动播放
+    function stopAutoPlay() {
+      isAutoPlaying = false;
+      
+      // 切换按钮状态
+      setTimeout(() => {
+        pauseBtn.classList.add('hidden');
+        startBtn.classList.remove('hidden');
+      }, 500);
+    }
+    
+    // 重置动画
+    function resetAnimation(callback = null) {
+      // 清除所有计时器和间隔器
+      clearAllTimers();
+      
+      // 重置状态
+      isAnimating = false;
+      isAutoPlaying = false;
+      
+      // 切换按钮状态
+      pauseBtn.classList.add('hidden');
+      startBtn.classList.remove('hidden');
+      
+      // 重新计算并显示
+      calculateAndDisplayAll();
+      goToStep(1, false);
+      
+      if (callback) callback();
+    }
+    
+    // 辅助函数：补全32位二进制数
+    function padWithLeadingZeros(binaryStr, length) {
+      while (binaryStr.length < length) {
+        binaryStr = '0' + binaryStr;
+      }
+      return binaryStr;
+    }
+  </script>
+</body>
+</html>
+    
