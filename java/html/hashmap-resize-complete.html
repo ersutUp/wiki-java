@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HashMap 扩容动画演示</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind 配置 -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#165DFF',
+            secondary: '#FF7D00',
+            success: '#00B42A',
+            warning: '#FF7D00',
+            danger: '#F53F3F',
+            dark: '#1D2129',
+            light: '#F2F3F5',
+            'hash-blue': '#4080FF',
+            'bucket-bg': '#F0F7FF',
+            'node-bg': '#E6F7FF',
+            'threshold': '#FAAD14'
+          },
+          fontFamily: {
+            inter: ['Inter', 'sans-serif'],
+          },
+        },
+      }
+    }
+  </script>
+  
+  <style type="text/tailwindcss">
+    @layer utilities {
+      .content-auto {
+        content-visibility: auto;
+      }
+      .bucket {
+        @apply w-20 h-auto min-h-[80px] border-2 rounded-md flex flex-col items-center p-1 transition-all duration-300 relative;
+      }
+      .bucket-normal {
+        @apply border-gray-300 bg-bucket-bg;
+      }
+      .bucket-active {
+        @apply border-primary bg-primary/10;
+      }
+      .bucket-highlight {
+        @apply border-secondary ring-2 ring-secondary/30;
+      }
+      .node {
+        @apply w-full h-8 rounded my-0.5 flex items-center justify-center text-sm border font-medium transition-all duration-300;
+      }
+      .node-normal {
+        @apply border-gray-300 bg-white;
+      }
+      .node-moving {
+        @apply absolute z-10 shadow-lg scale-110 transition-all duration-500;
+      }
+      .node-new {
+        @apply border-primary bg-primary/10 animate-pulse;
+      }
+      .tree-node {
+        @apply w-10 h-10 rounded-full flex items-center justify-center text-sm border font-medium;
+      }
+      .arrow {
+        @apply absolute w-4 h-4 text-gray-400;
+      }
+      .progress-bar-fill {
+        @apply h-full transition-all duration-500 ease-out;
+      }
+      .resize-indicator {
+        @apply absolute -top-8 left-1/2 transform -translate-x-1/2 bg-primary text-white text-xs py-1 px-2 rounded whitespace-nowrap;
+      }
+      .tooltip {
+        @apply invisible absolute bg-dark text-white text-xs rounded py-1 px-2 z-50 transition-opacity duration-200 opacity-0 w-max;
+      }
+      .has-tooltip:hover .tooltip {
+        @apply visible opacity-100;
+      }
+    }
+  </style>
+</head>
+
+<body class="font-inter bg-gray-50 text-dark min-h-screen">
+  <!-- 顶部导航 -->
+  <header class="bg-white shadow-md sticky top-0 z-40">
+    <div class="container mx-auto px-4 py-4">
+      <div class="flex items-center space-x-2">
+        <i class="fa fa-expand text-primary text-2xl"></i>
+        <h1 class="text-xl md:text-2xl font-bold text-primary">HashMap 扩容动画演示</h1>
+      </div>
+    </div>
+  </header>
+
+  <!-- 主内容区 -->
+  <main class="container mx-auto px-4 py-8 max-w-6xl">
+    <!-- 介绍部分 -->
+    <section class="mb-8 text-center">
+      <h2 class="text-xl md:text-2xl font-bold mb-4">HashMap 动态扩容过程可视化</h2>
+      <p class="text-gray-600 mb-6">直观展示 HashMap 扩容的完整过程：从触发条件到容量翻倍，再到元素重新分配</p>
+      
+      <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div class="flex flex-col">
+            <label class="text-sm text-gray-500 mb-2">初始容量 (2ⁿ)</label>
+            <div class="flex items-center">
+              <select id="initialCapacity" class="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/50">
+                <option value="4">4 (2²)</option>
+                <option value="8" selected>8 (2³)</option>
+                <option value="16">16 (2⁴)</option>
+                <option value="32">32 (2⁵)</option>
+              </select>
+            </div>
+          </div>
+          
+          <div class="flex flex-col">
+            <label class="text-sm text-gray-500 mb-2">负载因子</label>
+            <div class="flex items-center">
+              <select id="loadFactor" class="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/50">
+                <option value="0.5">0.5</option>
+                <option value="0.75" selected>0.75</option>
+                <option value="0.9">0.9</option>
+                <option value="1.0">1.0</option>
+              </select>
+            </div>
+          </div>
+          
+          <div class="flex flex-col">
+            <label class="text-sm text-gray-500 mb-2">每次添加元素数量</label>
+            <div class="flex items-center">
+              <select id="addCount" class="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/50">
+                <option value="1" selected>1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="flex flex-wrap gap-4 justify-center mb-6">
+        <button id="addElements" class="bg-primary hover:bg-primary/90 text-white px-6 py-3 rounded-lg shadow-md transition-all flex items-center">
+          <i class="fa fa-plus mr-2"></i> 添加元素
+        </button>
+        <button id="autoDemo" class="bg-secondary hover:bg-secondary/90 text-white px-6 py-3 rounded-lg shadow-md transition-all flex items-center">
+          <i class="fa fa-play mr-2"></i> 自动演示
+        </button>
+        <button id="resetDemo" class="bg-gray-200 hover:bg-gray-300 text-dark px-6 py-3 rounded-lg shadow-md transition-all flex items-center">
+          <i class="fa fa-refresh mr-2"></i> 重置
+        </button>
+      </div>
+      
+      <!-- 状态指示器 -->
+      <div class="bg-white rounded-xl shadow p-4 mb-8">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div class="flex items-center">
+            <div class="w-24 text-sm text-gray-500">当前容量:</div>
+            <div class="font-semibold text-primary" id="currentCapacity">8</div>
+          </div>
+          <div class="flex items-center">
+            <div class="w-24 text-sm text-gray-500">元素数量:</div>
+            <div class="font-semibold" id="elementCount">0</div>
+          </div>
+          <div class="flex items-center">
+            <div class="w-24 text-sm text-gray-500">阈值:</div>
+            <div class="font-semibold text-warning" id="thresholdValue">6</div>
+          </div>
+          <div class="flex items-center">
+            <div class="w-24 text-sm text-gray-500">负载因子:</div>
+            <div class="font-semibold" id="currentLoadFactor">0.75</div>
+          </div>
+        </div>
+        
+        <!-- 填充进度条 -->
+        <div class="mt-4 h-3 bg-gray-200 rounded-full overflow-hidden relative">
+          <div id="fillProgress" class="progress-bar-fill bg-primary" style="width: 0%"></div>
+          <div id="thresholdMarker" class="absolute h-3 w-1 bg-threshold -translate-y-0.5" style="left: 75%"></div>
+        </div>
+        <div class="flex justify-between text-xs text-gray-500 mt-1">
+          <span>0</span>
+          <span id="thresholdLabel" class="text-threshold">阈值 (6)</span>
+          <span id="capacityLabel">容量 (8)</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 动画演示区 -->
+    <section class="bg-white rounded-xl shadow-lg p-6 mb-10 relative">
+      <h3 class="text-lg font-semibold mb-6 flex items-center">
+        <i class="fa fa-cubes text-primary mr-2"></i>
+        HashMap 结构可视化
+        <span id="resizeStatus" class="ml-4 text-sm bg-primary/10 text-primary px-3 py-1 rounded-full hidden">
+          <i class="fa fa-refresh fa-spin mr-1"></i> 正在扩容...
+        </span>
+      </h3>
+      
+      <!-- 旧数组容器 -->
+      <div class="mb-10" id="oldHashMapContainer">
+        <h4 class="text-base font-medium mb-3 text-gray-700">当前 HashMap (容量: <span id="oldCapacityDisplay">8</span>)</h4>
+        <div id="oldBucketsContainer" class="flex flex-wrap gap-2 justify-center min-h-[120px]">
+          <!-- 桶将通过JS动态生成 -->
+        </div>
+      </div>
+      
+      <!-- 扩容箭头指示器 -->
+      <div id="resizeArrow" class="hidden flex justify-center my-6">
+        <div class="text-gray-400 animate-bounce">
+          <i class="fa fa-long-arrow-down text-2xl"></i>
+          <div class="mt-1 text-sm">扩容中...</div>
+        </div>
+      </div>
+      
+      <!-- 新数组容器 -->
+      <div id="newHashMapContainer" class="hidden">
+        <h4 class="text-base font-medium mb-3 text-gray-700">扩容后 HashMap (容量: <span id="newCapacityDisplay">16</span>)</h4>
+        <div id="newBucketsContainer" class="flex flex-wrap gap-2 justify-center min-h-[120px]">
+          <!-- 新桶将通过JS动态生成 -->
+        </div>
+      </div>
+      
+      <!-- 过程说明 -->
+      <div class="mt-8 p-4 bg-light rounded-lg">
+        <h4 class="text-base font-medium mb-2 flex items-center">
+          <i class="fa fa-info-circle text-primary mr-2"></i>
+          过程说明
+        </h4>
+        <p id="processDescription" class="text-gray-600 text-sm">
+          HashMap 初始状态：容量为 8，阈值为 6 (8 × 0.75)。当元素数量超过阈值时，将触发扩容。
+        </p>
+      </div>
+    </section>
+    
+    <!-- 扩容原理说明 -->
+    <section class="grid md:grid-cols-2 gap-6 mb-10 mx-auto">
+      <style>
+        .principle-card {
+          flex: 1;
+          min-width: 0;
+        }
+      </style>
+      <div class="bg-white rounded-xl shadow-lg p-6 principle-card">
+        <h3 class="text-lg font-semibold mb-3 flex items-center">
+          <i class="fa fa-lightbulb-o text-primary mr-2"></i> 扩容核心原理
+        </h3>
+        <ul class="space-y-3 text-gray-600 text-sm">
+          <li class="flex items-start">
+            <i class="fa fa-check-circle text-success mt-1 mr-2"></i>
+            <span><strong>触发条件</strong>：当元素数量超过阈值（容量 × 负载因子）时触发扩容</span>
+          </li>
+          <li class="flex items-start">
+            <i class="fa fa-check-circle text-success mt-1 mr-2"></i>
+            <span><strong>容量变化</strong>：新容量 = 旧容量 × 2，始终保持为 2 的幂</span>
+          </li>
+          <li class="flex items-start">
+            <i class="fa fa-check-circle text-success mt-1 mr-2"></i>
+            <span><strong>元素重分配</strong>：利用哈希值高位信息，无需重新计算哈希码</span>
+          </li>
+          <li class="flex items-start">
+            <i class="fa fa-check-circle text-success mt-1 mr-2"></i>
+            <span><strong>新索引计算</strong>：要么与旧索引相同，要么 = 旧索引 + 旧容量</span>
+          </li>
+        </ul>
+      </div>
+      
+      <div class="bg-white rounded-xl shadow-lg p-6 principle-card">
+        <h3 class="text-lg font-semibold mb-3 flex items-center">
+          <i class="fa fa-code text-primary mr-2"></i> 索引计算优化
+        </h3>
+        <div class="bg-light p-4 rounded-lg font-mono text-sm overflow-x-auto">
+          <pre>// 旧容量为8 (2³)，旧掩码 = 8-1 = 7 (00000111)
+旧索引 = hash & 7
+
+// 新容量为16 (2⁴)，新掩码 = 16-1 = 15 (00001111)
+新索引 = hash & 15
+
+// 新索引只有两种可能：
+if ((hash & 8) == 0) {
+    新索引 = 旧索引
+} else {
+    新索引 = 旧索引 + 8  // 旧容量
+}</pre>
+          <div class="mt-3 text-gray-600 font-normal">
+            这种优化避免了重新计算哈希码，只需检查哈希值的第4位（8的二进制是1000）即可确定新索引
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- 页脚 -->
+  <footer class="bg-dark text-white py-6">
+    <div class="container mx-auto px-4 text-center text-gray-400 text-sm">
+      &copy; HashMap 扩容动画演示 | 展示从触发条件到元素重分配的完整过程
+    </div>
+  </footer>
+
+  <script>
+    // 全局变量
+    let capacity = 8;          // 当前容量
+    let loadFactor = 0.75;     // 负载因子
+    let threshold = capacity * loadFactor;  // 阈值
+    let size = 0;              // 元素数量
+    let elements = [];         // 存储所有元素的数组
+    let isAnimating = false;   // 动画状态
+    let isAutoPlaying = false; // 自动演示状态
+    let autoPlayInterval = null; // 自动演示计时器
+    let animationSpeed = 800;  // 动画速度（毫秒）
+    
+    // DOM 元素
+    const initialCapacitySelect = document.getElementById('initialCapacity');
+    const loadFactorSelect = document.getElementById('loadFactor');
+    const addCountSelect = document.getElementById('addCount');
+    const addElementsBtn = document.getElementById('addElements');
+    const autoDemoBtn = document.getElementById('autoDemo');
+    const resetDemoBtn = document.getElementById('resetDemo');
+    const currentCapacityEl = document.getElementById('currentCapacity');
+    const elementCountEl = document.getElementById('elementCount');
+    const thresholdValueEl = document.getElementById('thresholdValue');
+    const currentLoadFactorEl = document.getElementById('currentLoadFactor');
+    const fillProgressEl = document.getElementById('fillProgress');
+    const thresholdMarkerEl = document.getElementById('thresholdMarker');
+    const thresholdLabelEl = document.getElementById('thresholdLabel');
+    const capacityLabelEl = document.getElementById('capacityLabel');
+    const oldCapacityDisplayEl = document.getElementById('oldCapacityDisplay');
+    const newCapacityDisplayEl = document.getElementById('newCapacityDisplay');
+    const oldBucketsContainerEl = document.getElementById('oldBucketsContainer');
+    const newBucketsContainerEl = document.getElementById('newBucketsContainer');
+    const oldHashMapContainerEl = document.getElementById('oldHashMapContainer');
+    const newHashMapContainerEl = document.getElementById('newHashMapContainer');
+    const resizeArrowEl = document.getElementById('resizeArrow');
+    const resizeStatusEl = document.getElementById('resizeStatus');
+    const processDescriptionEl = document.getElementById('processDescription');
+    
+    // 初始化
+    document.addEventListener('DOMContentLoaded', () => {
+      updateStatusDisplay();
+      initializeBuckets();
+      setupEventListeners();
+    });
+    
+    // 设置事件监听器
+    function setupEventListeners() {
+      // 添加元素按钮
+      addElementsBtn.addEventListener('click', () => {
+        if (!isAnimating) {
+          const count = parseInt(addCountSelect.value);
+          addElements(count);
+        }
+      });
+      
+      // 自动演示按钮
+      autoDemoBtn.addEventListener('click', toggleAutoDemo);
+      
+      // 重置按钮
+      resetDemoBtn.addEventListener('click', resetDemo);
+      
+      // 初始容量变化
+      initialCapacitySelect.addEventListener('change', () => {
+        if (!isAnimating && !isAutoPlaying) {
+          resetDemo();
+        }
+      });
+      
+      // 负载因子变化
+      loadFactorSelect.addEventListener('change', () => {
+        if (!isAnimating && !isAutoPlaying) {
+          loadFactor = parseFloat(loadFactorSelect.value);
+          // 立即更新阈值
+          threshold = capacity * loadFactor;
+          updateStatusDisplay();
+          updateProcessDescription(`负载因子已更新为 ${loadFactor}，新阈值 = ${capacity} × ${loadFactor} = ${threshold.toFixed(1)}`);
+        }
+      });
+    }
+    
+    // 初始化桶
+    function initializeBuckets() {
+      oldBucketsContainerEl.innerHTML = '';
+      
+      for (let i = 0; i < capacity; i++) {
+        const bucket = createBucket(i);
+        oldBucketsContainerEl.appendChild(bucket);
+      }
+    }
+    
+    // 创建桶元素
+    function createBucket(index) {
+      const bucket = document.createElement('div');
+      bucket.className = 'bucket bucket-normal has-tooltip';
+      bucket.dataset.index = index;
+      
+      // 索引标签
+      const indexLabel = document.createElement('div');
+      indexLabel.className = 'text-xs text-gray-500 mb-1';
+      indexLabel.textContent = `#${index}`;
+      
+      // 节点容器
+      const nodesContainer = document.createElement('div');
+      nodesContainer.className = 'w-full flex flex-col items-center';
+      nodesContainer.dataset.index = index;
+      
+      // 提示框
+      const tooltip = document.createElement('div');
+      tooltip.className = 'tooltip';
+      tooltip.textContent = `桶 #${index}`;
+      
+      bucket.appendChild(indexLabel);
+      bucket.appendChild(nodesContainer);
+      bucket.appendChild(tooltip);
+      
+      return bucket;
+    }
+    
+    // 添加元素
+    function addElements(count) {
+      if (isAnimating) return;
+      
+      isAnimating = true;
+      addElementsBtn.disabled = true;
+      
+      let added = 0;
+      
+      // 逐个添加元素，带点延迟
+      const addNextElement = () => {
+        if (added < count) {
+          // 生成随机键值对
+          const key = generateRandomKey();
+          const value = Math.floor(Math.random() * 1000);
+          const element = { key, value };
+          
+          // 计算哈希码和索引
+          const hashCode = calculateHashCode(key);
+          const index = calculateIndex(hashCode, capacity);
+          
+          // 存储元素信息
+          element.hashCode = hashCode;
+          element.index = index;
+          elements.push(element);
+          
+          // 添加到UI
+          addElementToBucketUI(element, index);
+          
+          size++;
+          updateStatusDisplay();
+          
+          added++;
+          setTimeout(addNextElement, animationSpeed / 2);
+        } else {
+          // 修复扩容判断逻辑，使用精确比较
+          if (size > threshold || Math.abs(size - threshold) < 0.001) {
+            updateProcessDescription(`元素数量 (${size}) 超过阈值 (${threshold.toFixed(1)})，触发扩容...`);
+            // 先重置isAnimating，确保performResize可以执行
+            isAnimating = false;
+            setTimeout(performResize, animationSpeed);
+          } else {
+            isAnimating = false;
+            addElementsBtn.disabled = false;
+            
+            // 如果是自动演示，继续
+            if (isAutoPlaying) {
+              scheduleNextAutoStep();
+            }
+          }
+        }
+      };
+      
+      addNextElement();
+    }
+    
+    // 将元素添加到桶的UI
+    function addElementToBucketUI(element, index) {
+      return new Promise(resolve => {
+        // 创建节点元素
+        const node = document.createElement('div');
+        node.className = 'node node-new';
+        node.textContent = `${element.key}=${element.value}`;
+        node.dataset.key = element.key;
+        
+        // 获取对应的桶
+        const bucket = oldBucketsContainerEl.querySelector(`.bucket[data-index="${index}"] .flex-col`);
+        
+        // 添加到桶中
+        bucket.appendChild(node);
+        
+        // 高亮显示该桶
+        const bucketEl = oldBucketsContainerEl.querySelector(`.bucket[data-index="${index}"]`);
+        bucketEl.classList.remove('bucket-normal');
+        bucketEl.classList.add('bucket-active');
+        
+        // 更新说明
+        updateProcessDescription(`添加元素 ${element.key}=${element.value}，哈希码: ${element.hashCode}，索引: ${index}`);
+        
+        // 一段时间后移除高亮和新元素标记
+        setTimeout(() => {
+          node.classList.remove('node-new');
+          node.classList.add('node-normal');
+          bucketEl.classList.remove('bucket-active');
+          bucketEl.classList.add('bucket-normal');
+          resolve();
+        }, animationSpeed / 2);
+      });
+    }
+    
+    // 执行扩容
+    function performResize() {
+      if (isAnimating) return;
+      
+      isAnimating = true;
+      resizeStatusEl.classList.remove('hidden');
+      updateProcessDescription('开始扩容：容量翻倍并重新分配元素...');
+      
+      const oldCapacity = capacity;
+      const newCapacity = oldCapacity * 2;
+      
+      // 更新显示
+      oldCapacityDisplayEl.textContent = oldCapacity;
+      newCapacityDisplayEl.textContent = newCapacity;
+      
+      // 显示新数组容器和箭头
+      setTimeout(() => {
+        resizeArrowEl.classList.remove('hidden');
+        newHashMapContainerEl.classList.remove('hidden');
+        
+        // 创建新桶
+        newBucketsContainerEl.innerHTML = '';
+        for (let i = 0; i < newCapacity; i++) {
+          const bucket = createBucket(i);
+          newBucketsContainerEl.appendChild(bucket);
+        }
+        
+        // 逐个迁移元素
+        setTimeout(() => {
+          migrateElements(oldCapacity, newCapacity, 0);
+        }, animationSpeed);
+      }, animationSpeed);
+    }
+    
+    // 迁移元素到新数组
+    function migrateElements(oldCapacity, newCapacity, elementIndex) {
+      if (elementIndex >= elements.length) {
+        // 所有元素迁移完成
+        setTimeout(() => {
+          // 更新容量和阈值
+          capacity = newCapacity;
+          threshold = capacity * loadFactor;
+          
+          // 隐藏旧数组，更新显示
+          oldHashMapContainerEl.classList.add('hidden');
+          resizeArrowEl.classList.add('hidden');
+          
+          // 将新数组变为当前数组
+          setTimeout(() => {
+            oldBucketsContainerEl.innerHTML = newBucketsContainerEl.innerHTML;
+            oldCapacityDisplayEl.textContent = capacity;
+            oldHashMapContainerEl.classList.remove('hidden');
+            newHashMapContainerEl.classList.add('hidden');
+            
+            // 更新状态
+            updateStatusDisplay();
+            resizeStatusEl.classList.add('hidden');
+            updateProcessDescription(`扩容完成！新容量: ${capacity}，新阈值: ${threshold.toFixed(1)}`);
+            
+            isAnimating = false;
+            addElementsBtn.disabled = false;
+            
+            // 如果是自动演示，继续
+            if (isAutoPlaying) {
+              scheduleNextAutoStep();
+            }
+          }, animationSpeed);
+        }, animationSpeed);
+        
+        return;
+      }
+      
+      // 获取当前元素
+      const element = elements[elementIndex];
+      const oldIndex = element.index;
+      
+      // 计算新索引
+      const newIndex = calculateNewIndex(element.hashCode, oldCapacity, newCapacity);
+      element.index = newIndex;
+      
+      // 获取元素在旧桶中的节点
+      const oldBucket = oldBucketsContainerEl.querySelector(`.bucket[data-index="${oldIndex}"] .flex-col`);
+      const node = oldBucket.querySelector(`[data-key="${element.key}"]`);
+      
+      // 高亮显示旧桶和新桶
+      const oldBucketEl = oldBucketsContainerEl.querySelector(`.bucket[data-index="${oldIndex}"]`);
+      const newBucketEl = newBucketsContainerEl.querySelector(`.bucket[data-index="${newIndex}"]`);
+      
+      oldBucketEl.classList.add('bucket-highlight');
+      newBucketEl.classList.add('bucket-highlight');
+      
+      // 更新说明
+      updateProcessDescription(`迁移元素 ${element.key}=${element.value}: 旧索引 ${oldIndex} → 新索引 ${newIndex}`);
+      
+      // 准备移动动画
+      const oldRect = node.getBoundingClientRect();
+      const newBucketRect = newBucketsContainerEl.querySelector(`.bucket[data-index="${newIndex}"] .flex-col`).getBoundingClientRect();
+      
+      // 计算位置偏移
+      const offsetX = newBucketRect.left - oldRect.left;
+      const offsetY = newBucketRect.top - oldRect.top;
+      
+      // 应用动画类
+      node.classList.add('node-moving');
+      
+      // 执行移动动画
+      setTimeout(() => {
+        node.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
+        
+        // 动画完成后
+        setTimeout(() => {
+          // 从旧桶移除
+          oldBucket.removeChild(node);
+          
+          // 添加到新桶
+          const newBucket = newBucketsContainerEl.querySelector(`.bucket[data-index="${newIndex}"] .flex-col`);
+          newBucket.appendChild(node);
+          
+          // 重置样式
+          node.classList.remove('node-moving');
+          node.style.transform = '';
+          
+          // 移除高亮
+          oldBucketEl.classList.remove('bucket-highlight');
+          newBucketEl.classList.remove('bucket-highlight');
+          
+          // 处理下一个元素
+          setTimeout(() => {
+            migrateElements(oldCapacity, newCapacity, elementIndex + 1);
+          }, animationSpeed / 3);
+        }, animationSpeed);
+      }, 100);
+    }
+    
+    // 切换自动演示
+    function toggleAutoDemo() {
+      if (isAutoPlaying) {
+        // 停止自动演示
+        isAutoPlaying = false;
+        if (autoPlayInterval) {
+          clearInterval(autoPlayInterval);
+          autoPlayInterval = null;
+        }
+        autoDemoBtn.innerHTML = '<i class="fa fa-play mr-2"></i> 自动演示';
+        updateProcessDescription('自动演示已停止');
+      } else {
+        // 开始自动演示
+        isAutoPlaying = true;
+        autoDemoBtn.innerHTML = '<i class="fa fa-pause mr-2"></i> 暂停演示';
+        updateProcessDescription('开始自动演示，将持续添加元素直到触发扩容...');
+        
+        if (!isAnimating) {
+          scheduleNextAutoStep();
+        }
+      }
+    }
+    
+    // 安排下一个自动步骤
+    function scheduleNextAutoStep() {
+      if (!isAutoPlaying) return;
+      
+      autoPlayInterval = setTimeout(() => {
+        if (size < threshold * 1.5) { // 直到扩容后再添加一些元素
+          const count = parseInt(addCountSelect.value);
+          addElements(count);
+        } else {
+          // 演示完成
+          toggleAutoDemo();
+          updateProcessDescription('自动演示完成：已展示完整的扩容过程');
+        }
+      }, animationSpeed * 2);
+    }
+    
+    // 重置演示
+    function resetDemo() {
+      // 清除自动演示计时器
+      if (autoPlayInterval) {
+        clearInterval(autoPlayInterval);
+        autoPlayInterval = null;
+      }
+      
+      // 重置状态
+      capacity = parseInt(initialCapacitySelect.value);
+      loadFactor = parseFloat(loadFactorSelect.value);
+      threshold = capacity * loadFactor;
+      size = 0;
+      elements = [];
+      isAnimating = false;
+      isAutoPlaying = false;
+      
+      // 重置UI
+      oldHashMapContainerEl.classList.remove('hidden');
+      newHashMapContainerEl.classList.add('hidden');
+      resizeArrowEl.classList.add('hidden');
+      resizeStatusEl.classList.add('hidden');
+      autoDemoBtn.innerHTML = '<i class="fa fa-play mr-2"></i> 自动演示';
+      
+      // 重新初始化桶
+      initializeBuckets();
+      
+      // 更新显示
+      updateStatusDisplay();
+      updateProcessDescription(`HashMap 已重置：容量为 ${capacity}，阈值为 ${threshold.toFixed(1)} (${capacity} × ${loadFactor})`);
+      
+      // 启用按钮
+      addElementsBtn.disabled = false;
+    }
+    
+    // 更新状态显示
+    function updateStatusDisplay() {
+      currentCapacityEl.textContent = capacity;
+      elementCountEl.textContent = size;
+      
+      // 修复阈值计算，使用toFixed处理浮点数精度问题
+      threshold = capacity * loadFactor;
+      const displayThreshold = Number.isInteger(threshold) ? threshold : threshold.toFixed(1);
+      thresholdValueEl.textContent = displayThreshold;
+      
+      currentLoadFactorEl.textContent = loadFactor;
+      
+      // 更新进度条
+      const fillPercentage = Math.min(100, (size / capacity) * 100);
+      fillProgressEl.style.width = `${fillPercentage}%`;
+      
+      // 更新阈值标记位置
+      const thresholdPercentage = (threshold / capacity) * 100;
+      thresholdMarkerEl.style.left = `${thresholdPercentage}%`;
+      
+      // 更新标签
+      thresholdLabelEl.textContent = `阈值 (${displayThreshold})`;
+      capacityLabelEl.textContent = `容量 (${capacity})`;
+      
+      // 当接近阈值时改变颜色
+      if (size >= threshold) {
+        fillProgressEl.classList.remove('bg-primary');
+        fillProgressEl.classList.add('bg-warning');
+      } else {
+        fillProgressEl.classList.remove('bg-warning');
+        fillProgressEl.classList.add('bg-primary');
+      }
+    }
+    
+    // 更新过程说明
+    function updateProcessDescription(text) {
+      processDescriptionEl.textContent = text;
+    }
+    
+    // 生成随机键
+    function generateRandomKey() {
+      const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      const length = Math.floor(Math.random() * 3) + 2; // 2-4个字符
+      let key = '';
+      
+      for (let i = 0; i < length; i++) {
+        key += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      
+      return key;
+    }
+    
+    // 计算哈希码（模拟Java的String.hashCode()）
+    function calculateHashCode(key) {
+      let hashCode = 0;
+      for (let i = 0; i < key.length; i++) {
+        hashCode = 31 * hashCode + key.charCodeAt(i);
+      }
+      // 处理负数，转为无符号表示
+      return hashCode & 0xFFFFFFFF;
+    }
+    
+    // 计算索引
+    function calculateIndex(hashCode, capacity) {
+      return hashCode & (capacity - 1);
+    }
+    
+    // 计算新索引（利用HashMap扩容优化）
+    function calculateNewIndex(hashCode, oldCapacity, newCapacity) {
+      // 新索引 = 旧索引 或 旧索引 + 旧容量
+      // 取决于hashCode中对应旧容量的那个位是否为1
+      if ((hashCode & oldCapacity) === 0) {
+        return calculateIndex(hashCode, oldCapacity);
+      } else {
+        return calculateIndex(hashCode, oldCapacity) + oldCapacity;
+      }
+    }
+  </script>
+</body>
+</html>
+    
