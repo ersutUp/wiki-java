@@ -3,12 +3,33 @@
 # java基础
 
 - [类加载过程代码篇](./base/类加载过程代码篇.md)
+
 - [查看内存中的字节码文件](./base/memory-class.md)
+
 - [关于this关键字](./base/this.md)
+
 - [（未查找原因）catch中抛出异常的同时finally中执行return,为什么抛出的这个异常无法捕获?](./base/catch-throw-finally-return.md)
+
 - Lambda表达式与函数式编程
+
 - [java14新特性](./java/Java14新特性.md)
+
 - [集合](./java/集合.md#set)
+
+  - [ArrayList](./java/集合.md#arraylist)
+
+    - [原理展示](./java/html/arraylist-visualization-single-demo.html)
+
+  - [LinkedList](./java/集合.md#linkedlist)
+
+  - [HashMap](./java/集合.md#HashMap)
+
+    - [hsah查找索引网页演示](./java/html/hashmap-animation-fixed.html)
+
+    - [扩容网页演示](./java/html/hashmap-resize-complete.html)
+
+  - [LinkedHashMap](./java/集合.md#LinkedHashMap)
+
 
 # spring5
 - [新特性](./spring/spring5-new-characteristic.md)
